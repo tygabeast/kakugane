@@ -69,6 +69,14 @@ Imprint threshold, no-choice weight, affinity half-life, serial cap, embryos per
 
 Requires Java 21. `gradle build` produces the jar in `build/libs`. `gradle runGameTestServer` runs the automated server-side tests in `src/gametest`. `python3 tools/gen.py` regenerates textures and item models (Pillow and NumPy).
 
+## License
+
+MIT (see `LICENSE`), covering the code and the original textures and models in this repository. *Buso Renkin* and its names belong to their owners; this is an unofficial fan mod.
+
+## 0.1.1 changes
+
+- Licensed under MIT; `LICENSE` is now included in the jar and the source.
+
 ## 0.1.0 changes
 
 - First release: core Kakugane system (bonding, affinity imprinting, serials, palettes, traits, milestones with Deepen / Re-temper, legacy, heart Kakugane), Lance, Bow, Breaker and Silver Skin forms, the Hound Homunculus and Homunculus embryos, commands and config.

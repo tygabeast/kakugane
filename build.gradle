@@ -50,4 +50,5 @@ neoForge {
 
 jar {
     from('README.md')
+    from('LICENSE')
 }
