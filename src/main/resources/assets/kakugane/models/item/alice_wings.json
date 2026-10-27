@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "kakugane:item/alice_wings",
+    "layer1": "kakugane:item/alice_wings_accent"
+  }
+}

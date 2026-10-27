@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "kakugane:item/blade_belt",
+    "layer1": "kakugane:item/blade_belt_accent"
+  }
+}

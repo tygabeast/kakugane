@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "kakugane:item/aerial_operator",
+    "layer1": "kakugane:item/aerial_operator_accent"
+  }
+}

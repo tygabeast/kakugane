@@ -61,14 +61,21 @@ public class LeaderModel extends HumanoidModel<LabLeader> {
         PartDefinition body = r.getChild("body");
         body.addOrReplaceChild("hound_tail", CubeListBuilder.create().texOffs(32, 32).addBox(-1f, 0f, 0f, 2f, 2f, 7f),
                 PartPose.offsetAndRotation(0f, 10f, 2f, -0.6f, 0f, 0f));
-        // Four spider legs from the shoulder blades, arching up and out so they show over the shoulders from the front.
-        // {x, y, sideways angle}: the upper pair splays less than the lower pair.
-        float[][] legs = {{-2.5f, 2f, -1.15f}, {2.5f, 2f, 1.15f}, {-2.5f, 6f, -1.4f}, {2.5f, 6f, 1.4f}};
+        // Four spider legs from the shoulder blades, fanned out sideways past the arms so the spider shape reads from
+        // the front as well as the back. {x, y, sideways angle}: the lower pair spreads flatter than the upper pair.
+        float[][] legs = {{-2.5f, 2f, -1.5f}, {2.5f, 2f, 1.5f}, {-2.5f, 6f, -1.6f}, {2.5f, 6f, 1.6f}};
         for (int i = 0; i < 4; i++) {
-            body.addOrReplaceChild("crawler_leg_" + i, CubeListBuilder.create().texOffs(40, 48).addBox(-1f, -1f, 0f, 2f, 2f, 10f),
-                    PartPose.offsetAndRotation(legs[i][0], legs[i][1], 2f, 1.05f, legs[i][2], 0f));
+            // The lower (rear) pair is longer and thicker, so the spider silhouette reads from any angle.
+            CubeListBuilder leg = i < 2 ? CubeListBuilder.create().texOffs(40, 48).addBox(-1f, -1f, 0f, 2f, 2f, 10f)
+                    : CubeListBuilder.create().texOffs(8, 49).addBox(-1.5f, -1.5f, 0f, 3f, 3f, 12f);
+            body.addOrReplaceChild("crawler_leg_" + i, leg, PartPose.offsetAndRotation(legs[i][0], legs[i][1], 2f, legLift(i), legs[i][2], 0f));
         }
         return LayerDefinition.create(mesh, 64, 64);
+    }
+
+    /** How far each crawler leg tilts up from pointing straight back (radians): upper pair 0.7, lower pair 0.45. */
+    private static float legLift(int i) {
+        return i < 2 ? 0.7f : 0.45f;
     }
 
     @Override
@@ -81,7 +88,7 @@ public class LeaderModel extends HumanoidModel<LabLeader> {
         ramHorns.visible = ramPlateR.visible = ramPlateL.visible = t && m == LabLeader.Motif.RAM;
         for (int i = 0; i < 4; i++) {
             crawlerLegs[i].visible = t && m == LabLeader.Motif.CRAWLER;
-            crawlerLegs[i].xRot = 1.05f + 0.15f * Mth.sin(ageInTicks * 0.35f + i * 1.7f); // a slow, uneven twitch
+            crawlerLegs[i].xRot = legLift(i) + 0.15f * Mth.sin(ageInTicks * 0.35f + i * 1.7f); // a slow, uneven twitch
         }
         if (!t) return;
         if (m == LabLeader.Motif.HOUND) {

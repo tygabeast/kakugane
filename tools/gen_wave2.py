@@ -98,7 +98,8 @@ def crawler_texture():
 
 LEADER_BASE = [('head', 0, 0, 8, 8, 8), ('body', 16, 16, 8, 12, 4), ('arm', 40, 16, 4, 12, 4), ('leg', 0, 16, 4, 12, 4)]
 LEADER_PARTS = [('snout', 0, 32, 4, 3, 4), ('ear', 16, 32, 2, 3, 1), ('claw', 24, 32, 1, 1, 3), ('tail', 32, 32, 2, 2, 7),
-                ('horn', 0, 40, 2, 2, 6), ('horn2', 0, 48, 2, 5, 2), ('rplate', 16, 40, 5, 2, 6), ('cleg', 40, 48, 2, 2, 10)]
+                ('horn', 0, 40, 2, 2, 6), ('horn2', 0, 48, 2, 5, 2), ('rplate', 16, 40, 5, 2, 6), ('cleg', 40, 48, 2, 2, 10),
+                ('cleg', 8, 49, 3, 3, 12)]
 
 
 def leader_textures():
@@ -150,7 +151,7 @@ def leader_textures():
             if name == 'rplate':
                 return ramp(STEEL, (0.6 if (xx % 3 == 1 and yy == 1) else 0.38) * L + n * 0.6)
             if name == 'cleg':
-                return ramp(CHITIN, (0.62 if xx % 5 == 0 else 0.42) * L + n)
+                return ramp(CHITIN, (0.62 if (xx + yy) % 5 == 0 else 0.42) * L + n)
             return None
         return col
 
@@ -285,8 +286,10 @@ def leader_parts(motif=None):
                   (cube_polys((-5.5, -9, -3), (2, 2, 6), (0, 40), mirror=True), I), (cube_polys((-6.5, -8, 2), (2, 5, 2), (0, 48), mirror=True), I),
                   (cube_polys((-4, -3, -3), (5, 2, 6), (16, 40)), ra), (cube_polys((-1, -3, -3), (5, 2, 6), (16, 40), mirror=True), la)]
     elif motif == 'crawler':
-        for lx, ly, ry in ((-2.5, 2, -1.15), (2.5, 2, 1.15), (-2.5, 6, -1.4), (2.5, 6, 1.4)):
-            parts.append((cube_polys((-1, -1, 0), (2, 2, 10), (40, 48)), mat(lx, ly, 2, rx=1.05, ry=ry)))
+        for lx, ly, ry in ((-2.5, 2, -1.5), (2.5, 2, 1.5)):
+            parts.append((cube_polys((-1, -1, 0), (2, 2, 10), (40, 48)), mat(lx, ly, 2, rx=0.7, ry=ry)))
+        for lx, ly, ry in ((-2.5, 6, -1.6), (2.5, 6, 1.6)):
+            parts.append((cube_polys((-1.5, -1.5, 0), (3, 3, 12), (8, 49)), mat(lx, ly, 2, rx=0.45, ry=ry)))
     return parts
 
 
@@ -310,7 +313,7 @@ def previews(out, ram, crawler, leader, vat):
              (render(leader_parts(), leader[0], 256, -160, 8), 'Lab Leader (human form)')]
     hyb = combo(leader[1], leader[2])
     for m in ('hound', 'ram', 'crawler'):
-        tiles.append((render(leader_parts(m), hyb, 256, -150 if m != 'crawler' else -40, 8), f'Leader, {m} hybrid'))
+        tiles.append((render(leader_parts(m), hyb, 256, -150 if m != 'crawler' else -20, 8), f'Leader, {m} hybrid'))
     sheet = Image.new('RGBA', (256 * 3, 280 * 2), (54, 58, 66, 255))
     from PIL import ImageDraw
     d = ImageDraw.Draw(sheet)

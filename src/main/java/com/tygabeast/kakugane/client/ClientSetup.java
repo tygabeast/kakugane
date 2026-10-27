@@ -25,12 +25,22 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
 import org.lwjgl.glfw.GLFW;
+import com.tygabeast.kakugane.client.worn.BladeBeltRenderer;
+import com.tygabeast.kakugane.client.worn.GauntletsRenderer;
+import com.tygabeast.kakugane.client.worn.MantleRenderer;
+import com.tygabeast.kakugane.client.worn.MaskRenderer;
+import com.tygabeast.kakugane.client.worn.WingsRenderer;
+import top.theillusivec4.curios.api.client.CuriosRendererRegistry;
 
-/** Client-only setup on the mod bus: renderers, model switching, colour tints and the activation key. */
+/** Client-only setup on the mod bus: renderers, model switching, colour tints and the keys. */
 @EventBusSubscriber(modid = Kakugane.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class ClientSetup {
     public static final KeyMapping ACTIVATE = new KeyMapping("key.kakugane.activate",
             InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, "key.categories.kakugane");
+    public static final KeyMapping FORM_ABILITY = new KeyMapping("key.kakugane.ability",
+            InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, "key.categories.kakugane");
+    public static final KeyMapping ZOOM = new KeyMapping("key.kakugane.zoom",
+            InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_Z, "key.categories.kakugane");
 
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
@@ -49,6 +59,12 @@ public final class ClientSetup {
                 if (entity == null || entity.getUseItem() != stack) return 0f;
                 return (stack.getUseDuration(entity) - entity.getUseItemRemainingTicks()) / 20f;
             });
+            // Worn forms in Curios slots draw themselves on the player (see client/worn).
+            CuriosRendererRegistry.register(ModRegistry.AERIAL_OPERATOR.get(), MaskRenderer::new);
+            CuriosRendererRegistry.register(ModRegistry.ALICE_WINGS.get(), WingsRenderer::new);
+            CuriosRendererRegistry.register(ModRegistry.GAUNTLETS.get(), GauntletsRenderer::new);
+            CuriosRendererRegistry.register(ModRegistry.MANTLE.get(), MantleRenderer::new);
+            CuriosRendererRegistry.register(ModRegistry.BLADE_BELT.get(), BladeBeltRenderer::new);
         });
     }
 
@@ -59,7 +75,10 @@ public final class ClientSetup {
                 ModRegistry.KAKUGANE.get());
         event.register((stack, tint) -> tint == 1 ? 0xFF000000 | DyedItemColor.getOrDefault(stack, 0x9AA7B4) : -1,
                 ModRegistry.SILVER_SKIN_HELMET.get(), ModRegistry.SILVER_SKIN_CHESTPLATE.get(),
-                ModRegistry.SILVER_SKIN_LEGGINGS.get(), ModRegistry.SILVER_SKIN_BOOTS.get());
+                ModRegistry.SILVER_SKIN_LEGGINGS.get(), ModRegistry.SILVER_SKIN_BOOTS.get(), ModRegistry.GREAVES.get());
+        event.register((stack, tint) -> tint == 1 ? 0xFF000000 | KakuganeItem.data(stack).palette().rgb() : -1,
+                ModRegistry.AERIAL_OPERATOR.get(), ModRegistry.ALICE_WINGS.get(), ModRegistry.GAUNTLETS.get(),
+                ModRegistry.MANTLE.get(), ModRegistry.BLADE_BELT.get());
     }
 
     /** Tints the Silver Skin accent layer on the body; gives the charging Lance its own arm pose. */
@@ -86,7 +105,7 @@ public final class ClientSetup {
                 return 0xFF000000 | DyedItemColor.getOrDefault(stack, 0x9AA7B4);
             }
         }, ModRegistry.SILVER_SKIN_HELMET.get(), ModRegistry.SILVER_SKIN_CHESTPLATE.get(),
-                ModRegistry.SILVER_SKIN_LEGGINGS.get(), ModRegistry.SILVER_SKIN_BOOTS.get());
+                ModRegistry.SILVER_SKIN_LEGGINGS.get(), ModRegistry.SILVER_SKIN_BOOTS.get(), ModRegistry.GREAVES.get());
     }
 
     @SubscribeEvent
@@ -104,11 +123,18 @@ public final class ClientSetup {
         event.registerLayerDefinition(HoundModel.LAYER, HoundModel::createBodyLayer);
         event.registerLayerDefinition(RamModel.LAYER, RamModel::createBodyLayer);
         event.registerLayerDefinition(LeaderModel.LAYER, LeaderModel::createBodyLayer);
+        event.registerLayerDefinition(MaskRenderer.LAYER, MaskRenderer::createLayer);
+        event.registerLayerDefinition(WingsRenderer.LAYER, WingsRenderer::createLayer);
+        event.registerLayerDefinition(GauntletsRenderer.LAYER, GauntletsRenderer::createLayer);
+        event.registerLayerDefinition(MantleRenderer.LAYER, MantleRenderer::createLayer);
+        event.registerLayerDefinition(BladeBeltRenderer.LAYER, BladeBeltRenderer::createLayer);
     }
 
     @SubscribeEvent
     public static void onRegisterKeys(RegisterKeyMappingsEvent event) {
         event.register(ACTIVATE);
+        event.register(FORM_ABILITY);
+        event.register(ZOOM);
     }
 
     private ClientSetup() {}

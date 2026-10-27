@@ -76,17 +76,14 @@ public final class KakuganeCommand {
                                     var st = labHere(c.getSource());
                                     if (st == null) return 0;
                                     var level = c.getSource().getLevel();
-                                    var lab = LabTracker.get(level).record(st);
-                                    int stage = IntegerArgumentType.getInteger(c, "stage");
-                                    // Move the day count to the start of that stage too, so growth carries on from there.
-                                    lab.days = stage * KakuganeConfig.LAB_DAYS_PER_STAGE.get();
-                                    LabTracker.setStage(level, st, lab, stage);
+                                    // Also moves the day count (and clock) to the start of that stage, so growth carries on from there.
+                                    LabTracker.forceStage(level, st, IntegerArgumentType.getInteger(c, "stage"));
                                     return labInfo(c.getSource());
                                 })))
                         .then(Commands.literal("advance").requires(s -> s.hasPermission(2)).executes(c -> {
                             var st = labHere(c.getSource());
                             if (st == null) return 0;
-                            LabTracker.update(c.getSource().getLevel(), st, true);
+                            LabTracker.advance(c.getSource().getLevel(), st);
                             return labInfo(c.getSource());
                         })))
                 .then(Commands.literal("heart").requires(s -> s.hasPermission(2))

@@ -49,7 +49,7 @@ public final class Hearts {
         KakuganeData d = ActiveForms.ensureSerial(p, heart, KakuganeAccess.data(heart));
         d = d.bondTo(p.getUUID(), p.getGameProfile().getName()).withHeart(true).withActive(false);
         heart.set(ModRegistry.KAKUGANE_DATA.get(), d);
-        heart.remove(ModRegistry.STORED_ARMOR.get());
+        giveBackStored(p, heart);
         h.stack = heart;
         h.used = true;
 
@@ -64,6 +64,17 @@ public final class Hearts {
         return true;
     }
 
+    /**
+     * Anything a Kakugane is still storing (armor a worn form displaced) goes back to the player, or is dropped if
+     * the inventory is full. Normally the form has already reverted and this finds nothing; it is a safety net.
+     */
+    private static void giveBackStored(ServerPlayer p, ItemStack kakugane) {
+        net.minecraft.world.item.component.ItemContainerContents stored = kakugane.get(ModRegistry.STORED_ARMOR.get());
+        if (stored == null) return;
+        kakugane.remove(ModRegistry.STORED_ARMOR.get());
+        stored.nonEmptyItemsCopy().forEach(item -> p.getInventory().placeItemBackInInventory(item));
+    }
+
     /** On a true death the heart Kakugane leaves the body as an unbonded Kakugane that keeps its form. */
     public static void dropOnTrueDeath(ServerPlayer p, Collection<ItemEntity> drops) {
         HeartData h = KakuganeAccess.heart(p);
@@ -71,7 +82,12 @@ public final class Hearts {
         ItemStack s = h.stack;
         h.stack = ItemStack.EMPTY;
         s.set(ModRegistry.KAKUGANE_DATA.get(), KakuganeAccess.data(s).unbond().withHeart(false).withActive(false));
-        s.remove(ModRegistry.STORED_ARMOR.get());
+        // On death the stored items join the other drops rather than an inventory that has already been emptied.
+        net.minecraft.world.item.component.ItemContainerContents stored = s.get(ModRegistry.STORED_ARMOR.get());
+        if (stored != null) {
+            s.remove(ModRegistry.STORED_ARMOR.get());
+            stored.nonEmptyItemsCopy().forEach(item -> drops.add(new ItemEntity(p.level(), p.getX(), p.getY(), p.getZ(), item)));
+        }
         ItemEntity e = new ItemEntity(p.level(), p.getX(), p.getY(), p.getZ(), s);
         e.setDefaultPickUpDelay();
         drops.add(e);

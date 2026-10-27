@@ -2,7 +2,11 @@ package com.tygabeast.kakugane.event;
 
 import com.tygabeast.kakugane.Kakugane;
 import com.tygabeast.kakugane.KakuganeConfig;
+import com.tygabeast.kakugane.ability.AliceWings;
 import com.tygabeast.kakugane.ability.Alchemy;
+import com.tygabeast.kakugane.ability.BladeBelt;
+import com.tygabeast.kakugane.ability.Gauntlets;
+import com.tygabeast.kakugane.ability.Mantle;
 import com.tygabeast.kakugane.ability.SilverSkin;
 import com.tygabeast.kakugane.ability.TraitEffects;
 import com.tygabeast.kakugane.core.ActiveForms;
@@ -22,8 +26,11 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.effect.MobEffectCategory;
+import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.AxeItem;
@@ -62,10 +69,22 @@ public final class CombatEvents {
             if (st.activeTrait == Trait.ECHO && attacker.getRandom().nextFloat() < 0.15f * st.traitScale()) amount *= 1.4f;
         }
 
+        // Worn forms that change the wearer's own hits.
+        if (src.getEntity() instanceof ServerPlayer attacker && attacker != target) {
+            PlayerState st = KakuganeAccess.state(attacker);
+            if (st.activeForm == Archetype.GAUNTLETS && isMelee(src, attacker)) amount = Gauntlets.onMelee(attacker, st, target, amount, Affinity.now(attacker));
+            if (st.activeForm == Archetype.MANTLE) amount = Mantle.onAttack(attacker, st, amount, Affinity.now(attacker));
+        }
+
         if (target instanceof ServerPlayer p) {
             PlayerState st = KakuganeAccess.state(p);
             long now = Affinity.now(p);
             st.lastHurtTick = now;
+            if (st.activeForm == Archetype.BLADE_BELT && BladeBelt.tryParry(p, st, src)) {
+                event.setCanceled(true);
+                return;
+            }
+            if (st.activeForm == Archetype.ALICE) AliceWings.onHurt(p, st);
             if (st.hasActive()) {
                 if (st.activeTrait == Trait.GUARDING) amount *= 1f - 0.08f * st.traitScale();
                 if (st.activeTrait == Trait.FEATHERFALL && src.is(DamageTypeTags.IS_FALL)) amount *= Math.max(0f, 1f - 0.4f * st.traitScale());
@@ -87,14 +106,32 @@ public final class CombatEvents {
 
         if (src.getEntity() instanceof ServerPlayer attacker && attacker != target) {
             PlayerState st = KakuganeAccess.state(attacker);
+            long now = Affinity.now(attacker);
+            boolean melee = isMelee(src, attacker);
             if (st.hasActive() && Alchemy.isAlchemical(src)) TraitEffects.onHit(attacker, st, target, dealt);
+            if (melee && st.activeForm == Archetype.BLADE_BELT) BladeBelt.onMelee(attacker, st, target, now);
 
-            // Affinity: behaviour signals from melee hits on hostile mobs.
+            // Affinity: behaviour signals from hits on hostile mobs.
             // Skipped while a form is active, so a form never reinforces itself.
-            if (direct == attacker && target instanceof Enemy && !st.hasActive()) {
-                if (attacker.isSprinting() || looksLikeCrit(attacker)) Affinity.record(attacker, Archetype.LANCE, 0.25);
-                if (Affinity.now(attacker) - st.lastHurtTick < 60) Affinity.record(attacker, Archetype.SILVER_SKIN, 0.2);
+            if (target instanceof Enemy && !st.hasActive()) {
+                if (melee) {
+                    if (attacker.isSprinting() || looksLikeCrit(attacker)) Affinity.record(attacker, Archetype.LANCE, 0.25);
+                    if (now - st.lastHurtTick < 60) Affinity.record(attacker, Archetype.SILVER_SKIN, 0.2);
+                    // Fists, or quick chains of hits.
+                    long since = now - st.lastMeleeTick;
+                    if (attacker.getMainHandItem().isEmpty()) Affinity.record(attacker, Archetype.GAUNTLETS, 0.25);
+                    else if (since >= 6 && since <= 15) Affinity.record(attacker, Archetype.GAUNTLETS, 0.1);
+                    // Hitting on the way up from a jump (a crit on the way down counts for the Lance instead).
+                    if (!attacker.onGround() && attacker.fallDistance == 0 && !attacker.onClimbable() && !attacker.isInWater()
+                            && !attacker.isPassenger() && !attacker.isFallFlying()) Affinity.record(attacker, Archetype.GREAVES, 0.3);
+                }
+                // Striking from the air: elytra, or well above the target.
+                if (attacker.isFallFlying()) Affinity.record(attacker, Archetype.ALICE, 0.3);
+                else if (attacker.getY() - target.getY() >= 3) Affinity.record(attacker, Archetype.ALICE, 0.2);
+                // Hitting something that isn't after you.
+                if (target instanceof Mob m && m.getTarget() != attacker) Affinity.record(attacker, Archetype.MANTLE, 0.2);
             }
+            if (melee) st.lastMeleeTick = now;
         }
 
         // Thorns trait: reflect part of melee damage (never reflect a reflection).
@@ -130,7 +167,11 @@ public final class CombatEvents {
         if (!(src.getEntity() instanceof ServerPlayer killer) || killer == victim) return;
         Entity direct = src.getDirectEntity();
 
+        PlayerState killerState = KakuganeAccess.state(killer);
+        if (killerState.activeForm == Archetype.MANTLE) Mantle.onKill(killer, killerState, Affinity.now(killer));
+
         // Affinity: tool choices on hostile kills. Kills with a Kakugane form don't count, so a form never feeds itself.
+        if (victim instanceof Enemy && !killerState.hasActive()) killSignals(killer, victim, src);
         if (victim instanceof Enemy) {
             if (direct instanceof Projectile proj && !(direct instanceof AlchemicArrow) && proj.getOwner() == killer) {
                 Affinity.record(killer, Archetype.BOW, Affinity.weight(Loadout.hasMelee(killer), 1.0));
@@ -143,11 +184,39 @@ public final class CombatEvents {
         }
 
         // Deeds for milestones: defeats done with the active Kakugane.
-        PlayerState st = KakuganeAccess.state(killer);
-        if (st.hasActive() && Alchemy.isAlchemical(src)) {
+        if (killerState.hasActive() && Alchemy.isAlchemical(src)) {
             if (victim.getType().is(ModTags.HUMAN_HOMUNCULI)) Milestones.credit(killer, KakuganeData.Deeds::withHuman);
             if (victim.getType().is(ModTags.ELITE_HOMUNCULI)) Milestones.credit(killer, KakuganeData.Deeds::withElite);
         }
+    }
+
+    /** Kill signals for the worn forms (one small entity search, only for the Blade Belt's "surrounded" check). */
+    private static void killSignals(ServerPlayer killer, LivingEntity victim, DamageSource src) {
+        // Aerial Operator: fighting underwater, or with status effects (potions, tipped arrows, effect weapons).
+        if (killer.isUnderWater()) Affinity.record(killer, Archetype.AERIAL_OPERATOR, 0.8);
+        if (src.is(DamageTypes.INDIRECT_MAGIC) || src.is(DamageTypes.MAGIC)) {
+            Affinity.record(killer, Archetype.AERIAL_OPERATOR, 1.0);
+        } else {
+            for (MobEffectInstance e : victim.getActiveEffects()) {
+                if (e.getEffect().value().getCategory() == MobEffectCategory.HARMFUL) {
+                    Affinity.record(killer, Archetype.AERIAL_OPERATOR, 0.6);
+                    break;
+                }
+            }
+        }
+        // Alice: kills while gliding.
+        if (killer.isFallFlying()) Affinity.record(killer, Archetype.ALICE, 1.0);
+        // Mantle: killing something that wasn't after you.
+        if (victim instanceof Mob m && m.getTarget() != killer) Affinity.record(killer, Archetype.MANTLE, 0.5);
+        // Blade Belt: kills while surrounded by three or more hostiles.
+        int around = killer.level().getEntitiesOfClass(LivingEntity.class, killer.getBoundingBox().inflate(6),
+                e -> e != victim && e.isAlive() && e instanceof Enemy).size();
+        if (around >= 3) Affinity.record(killer, Archetype.BLADE_BELT, 1.0);
+    }
+
+    /** A melee swing by this player (not a projectile, not an ability). */
+    private static boolean isMelee(DamageSource src, ServerPlayer p) {
+        return src.getDirectEntity() == p && (src.is(DamageTypes.PLAYER_ATTACK));
     }
 
     /** Vanilla's critical-hit condition, checked after the fact. */

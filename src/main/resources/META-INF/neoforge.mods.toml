@@ -5,7 +5,7 @@ issueTrackerURL=""
 
 [[mods]]
 modId="kakugane"
-version="0.2.0"
+version="0.3.0"
 displayName="Kakugane"
 enumExtensions="META-INF/enumextensions.json"
 authors="Tygabeast"
@@ -25,5 +25,13 @@ side="BOTH"
 modId="minecraft"
 type="required"
 versionRange="[1.21.1,1.21.2)"
+ordering="NONE"
+side="BOTH"
+
+# Curios provides the head, back, hands and belt slots that most worn forms use.
+[[dependencies.kakugane]]
+modId="curios"
+type="required"
+versionRange="[9.5.0,)"
 ordering="NONE"
 side="BOTH"

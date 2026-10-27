@@ -13,7 +13,7 @@ import com.tygabeast.kakugane.data.KakuganeData;
 import com.tygabeast.kakugane.data.Trait;
 import com.tygabeast.kakugane.entity.Hound;
 import com.tygabeast.kakugane.item.KakuganeItem;
-import com.tygabeast.kakugane.item.SilverSkinArmorItem;
+import com.tygabeast.kakugane.item.FormArmorItem;
 import com.tygabeast.kakugane.registry.ModRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
@@ -36,7 +36,7 @@ import java.util.UUID;
 @PrefixGameTestTemplate(false)
 public class KakuganeGameTests {
 
-    private static ItemStack formed(Archetype form, int serial) {
+    static ItemStack formed(Archetype form, int serial) {
         ItemStack s = new ItemStack(ModRegistry.KAKUGANE.get());
         s.set(ModRegistry.KAKUGANE_DATA.get(), KakuganeData.EMPTY.withSerial(serial).withForm(form, Trait.pick(serial, form.worn()), ""));
         return s;
@@ -46,9 +46,35 @@ public class KakuganeGameTests {
         return KakuganeItem.data(s);
     }
 
+    /**
+     * Like GameTestHelper.makeMockServerPlayerInLevel, but the fake connection accepts modded packets (Curios syncs
+     * its slots to every player that joins, and the vanilla mock connection refuses anything non-vanilla).
+     * Like the vanilla mock player, it counts as creative.
+     */
+    static ServerPlayer mockPlayer(GameTestHelper h) {
+        return mockPlayer(h, true);
+    }
+
+    static ServerPlayer mockPlayer(GameTestHelper h, boolean creative) {
+        var cookie = net.minecraft.server.network.CommonListenerCookie.createInitial(
+                new com.mojang.authlib.GameProfile(UUID.randomUUID(), "test-mock-player"), false);
+        ServerPlayer p = new ServerPlayer(h.getLevel().getServer(), h.getLevel(), cookie.gameProfile(), cookie.clientInformation()) {
+            @Override
+            public boolean isSpectator() { return false; }
+
+            @Override
+            public boolean isCreative() { return creative; }
+        };
+        var connection = new net.minecraft.network.Connection(net.minecraft.network.protocol.PacketFlow.SERVERBOUND);
+        new io.netty.channel.embedded.EmbeddedChannel(connection);
+        net.neoforged.neoforge.network.registration.NetworkRegistry.configureMockConnection(connection);
+        h.getLevel().getServer().getPlayerList().placeNewPlayer(connection, p, cookie);
+        return p;
+    }
+
     @GameTest(template = "empty")
     public static void imprintNeedsCombatThenActivates(GameTestHelper h) {
-        ServerPlayer p = h.makeMockServerPlayerInLevel();
+        ServerPlayer p = mockPlayer(h);
         p.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModRegistry.KAKUGANE.get()));
         ActiveForms.activateStack(p, p.getMainHandItem());
         KakuganeData d = data(p.getMainHandItem());
@@ -72,12 +98,12 @@ public class KakuganeGameTests {
 
     @GameTest(template = "empty")
     public static void silverSkinStoresAndReturnsArmor(GameTestHelper h) {
-        ServerPlayer p = h.makeMockServerPlayerInLevel();
+        ServerPlayer p = mockPlayer(h);
         p.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE));
         p.setItemInHand(InteractionHand.MAIN_HAND, formed(Archetype.SILVER_SKIN, 901));
         h.assertTrue(ActiveForms.activateStack(p, p.getMainHandItem()), "activates");
-        h.assertTrue(p.getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof SilverSkinArmorItem, "suit chest on");
-        h.assertTrue(p.getItemBySlot(EquipmentSlot.FEET).getItem() instanceof SilverSkinArmorItem, "suit boots on");
+        h.assertTrue(p.getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof FormArmorItem, "suit chest on");
+        h.assertTrue(p.getItemBySlot(EquipmentSlot.FEET).getItem() instanceof FormArmorItem, "suit boots on");
         ItemContainerContents stored = p.getMainHandItem().get(ModRegistry.STORED_ARMOR.get());
         h.assertTrue(stored != null, "old armor stored");
         NonNullList<ItemStack> list = NonNullList.withSize(4, ItemStack.EMPTY);
@@ -85,7 +111,7 @@ public class KakuganeGameTests {
         h.assertTrue(list.get(1).is(Items.IRON_CHESTPLATE), "iron chestplate kept in slot order");
 
         p.getInventory().tick(); // pieces in their slots must survive a tick
-        h.assertTrue(p.getItemBySlot(EquipmentSlot.HEAD).getItem() instanceof SilverSkinArmorItem, "pieces survive while active");
+        h.assertTrue(p.getItemBySlot(EquipmentSlot.HEAD).getItem() instanceof FormArmorItem, "pieces survive while active");
 
         ActiveForms.deactivate(p);
         h.assertTrue(p.getItemBySlot(EquipmentSlot.CHEST).is(Items.IRON_CHESTPLATE), "chestplate returned");
@@ -96,7 +122,7 @@ public class KakuganeGameTests {
 
     @GameTest(template = "empty")
     public static void heldFormStaysActiveAndEmbryosCanBeCrushed(GameTestHelper h) {
-        ServerPlayer p = h.makeMockServerPlayerInLevel();
+        ServerPlayer p = mockPlayer(h);
         p.getInventory().selected = 0;
         p.getInventory().setItem(0, formed(Archetype.LANCE, 902));
         p.getInventory().setItem(1, new ItemStack(ModRegistry.EMBRYO.get(), 3));
@@ -119,7 +145,7 @@ public class KakuganeGameTests {
 
     @GameTest(template = "empty")
     public static void missingFormRevertsAfterGrace(GameTestHelper h) {
-        ServerPlayer p = h.makeMockServerPlayerInLevel(); // the mock player counts as creative: 60 s grace
+        ServerPlayer p = mockPlayer(h); // the mock player counts as creative: 60 s grace
         p.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE));
         p.setItemInHand(InteractionHand.MAIN_HAND, formed(Archetype.SILVER_SKIN, 911));
         ActiveForms.activateStack(p, p.getMainHandItem());
@@ -127,7 +153,7 @@ public class KakuganeGameTests {
         p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY); // e.g. lifted in the creative inventory
         PlayerState st = KakuganeAccess.state(p);
         for (int i = 0; i < 59; i++) ActiveForms.validate(p, st);
-        h.assertTrue(st.hasActive() && p.getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof SilverSkinArmorItem, "grace period");
+        h.assertTrue(st.hasActive() && p.getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof FormArmorItem, "grace period");
         p.setItemInHand(InteractionHand.MAIN_HAND, plate); // put back down
         ActiveForms.validate(p, st);
         h.assertTrue(st.hasActive() && st.missingChecks == 0, "found again, counter reset");
@@ -145,7 +171,7 @@ public class KakuganeGameTests {
 
     @GameTest(template = "empty")
     public static void onlyOneActive(GameTestHelper h) {
-        ServerPlayer p = h.makeMockServerPlayerInLevel();
+        ServerPlayer p = mockPlayer(h);
         p.getInventory().setItem(0, formed(Archetype.LANCE, 903));
         p.getInventory().setItem(1, formed(Archetype.BREAKER, 904));
         p.getInventory().selected = 0;
@@ -160,7 +186,7 @@ public class KakuganeGameTests {
 
     @GameTest(template = "empty")
     public static void houndResistsMundaneDamage(GameTestHelper h) {
-        ServerPlayer p = h.makeMockServerPlayerInLevel();
+        ServerPlayer p = mockPlayer(h);
         Hound hound = h.spawn(ModRegistry.HOUND.get(), new BlockPos(1, 1, 1));
         float start = hound.getHealth();
         hound.hurt(p.damageSources().playerAttack(p), 10f);
@@ -179,7 +205,7 @@ public class KakuganeGameTests {
 
     @GameTest(template = "empty")
     public static void heartSavesOnce(GameTestHelper h) {
-        ServerPlayer p = h.makeMockServerPlayerInLevel();
+        ServerPlayer p = mockPlayer(h);
         p.getInventory().setItem(5, new ItemStack(ModRegistry.KAKUGANE.get()));
         p.die(p.damageSources().generic());
         HeartData heart = KakuganeAccess.heart(p);
@@ -194,7 +220,7 @@ public class KakuganeGameTests {
 
     @GameTest(template = "empty")
     public static void heartHeldFormProjection(GameTestHelper h) {
-        ServerPlayer p = h.makeMockServerPlayerInLevel();
+        ServerPlayer p = mockPlayer(h);
         HeartData heart = KakuganeAccess.heart(p);
         ItemStack s = formed(Archetype.LANCE, 906);
         s.set(ModRegistry.KAKUGANE_DATA.get(), data(s).bondTo(p.getUUID(), "test").withHeart(true));
@@ -215,7 +241,7 @@ public class KakuganeGameTests {
 
     @GameTest(template = "empty")
     public static void milestoneDeepen(GameTestHelper h) {
-        ServerPlayer p = h.makeMockServerPlayerInLevel();
+        ServerPlayer p = mockPlayer(h);
         ItemStack s = formed(Archetype.BOW, 907);
         p.setItemInHand(InteractionHand.MAIN_HAND, s);
         ActiveForms.activateStack(p, p.getMainHandItem());
@@ -243,7 +269,7 @@ public class KakuganeGameTests {
 
     @GameTest(template = "empty")
     public static void embryosCanBeFirstMilestoneAndGivenTierSurvivesFirstBond(GameTestHelper h) {
-        ServerPlayer p = h.makeMockServerPlayerInLevel();
+        ServerPlayer p = mockPlayer(h);
         ItemStack s = formed(Archetype.BREAKER, 909);
         s.set(ModRegistry.KAKUGANE_DATA.get(), data(s).withTier(2));
         p.setItemInHand(InteractionHand.MAIN_HAND, s);
@@ -256,7 +282,7 @@ public class KakuganeGameTests {
 
     @GameTest(template = "empty")
     public static void silverSkinPiecesAreCursed(GameTestHelper h) {
-        ServerPlayer p = h.makeMockServerPlayerInLevel();
+        ServerPlayer p = mockPlayer(h);
         p.setItemInHand(InteractionHand.MAIN_HAND, formed(Archetype.SILVER_SKIN, 910));
         ActiveForms.activateStack(p, p.getMainHandItem());
         ItemStack chest = p.getItemBySlot(EquipmentSlot.CHEST);
@@ -273,7 +299,7 @@ public class KakuganeGameTests {
 
     @GameTest(template = "empty")
     public static void bondedRefusesOthers(GameTestHelper h) {
-        ServerPlayer p = h.makeMockServerPlayerInLevel();
+        ServerPlayer p = mockPlayer(h);
         ItemStack s = formed(Archetype.LANCE, 908);
         s.set(ModRegistry.KAKUGANE_DATA.get(), data(s).bondTo(UUID.randomUUID(), "Someone"));
         p.setItemInHand(InteractionHand.MAIN_HAND, s);
@@ -287,7 +313,7 @@ public class KakuganeGameTests {
 
     @GameTest(template = "empty")
     public static void ramPlatingDeflectsFrontHits(GameTestHelper h) {
-        ServerPlayer p = h.makeMockServerPlayerInLevel();
+        ServerPlayer p = mockPlayer(h);
         com.tygabeast.kakugane.entity.Ram ram = h.spawn(ModRegistry.RAM.get(), new BlockPos(1, 1, 1));
         ram.setNoAi(true);
         ram.setYRot(0f);
@@ -307,7 +333,7 @@ public class KakuganeGameTests {
 
     @GameTest(template = "empty", timeoutTicks = 120)
     public static void leaderTransformsRegeneratesAndSummons(GameTestHelper h) {
-        ServerPlayer p = h.makeMockServerPlayerInLevel();
+        ServerPlayer p = mockPlayer(h);
         com.tygabeast.kakugane.entity.LabLeader leader = h.spawn(ModRegistry.LAB_LEADER.get(), new BlockPos(1, 1, 1));
         leader.setMotif(com.tygabeast.kakugane.entity.LabLeader.Motif.RAM);
         h.assertFalse(leader.transformed(), "starts in human form");

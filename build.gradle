@@ -23,6 +23,20 @@ neoForge {
     }
 }
 
+// Curios (required): the extra equipment slots worn forms use (head, back, hands, belt).
+repositories {
+    maven {
+        name = 'Curios'
+        url = 'https://maven.theillusivec4.top/'
+        content { includeGroup 'top.theillusivec4.curios' }
+    }
+}
+
+dependencies {
+    compileOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}:api"
+    runtimeOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}"
+}
+
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
@@ -33,6 +47,10 @@ sourceSets {
         compileClasspath += sourceSets.main.output
         runtimeClasspath += sourceSets.main.output
     }
+}
+dependencies {
+    gametestCompileOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}:api"
+    gametestRuntimeOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}"
 }
 neoForge {
     addModdingDependenciesTo sourceSets.gametest

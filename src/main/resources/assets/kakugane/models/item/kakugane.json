@@ -58,6 +58,42 @@
         "kakugane:form": 4
       },
       "model": "kakugane:item/form_silver_skin"
+    },
+    {
+      "predicate": {
+        "kakugane:form": 5
+      },
+      "model": "kakugane:item/aerial_operator"
+    },
+    {
+      "predicate": {
+        "kakugane:form": 6
+      },
+      "model": "kakugane:item/alice_wings"
+    },
+    {
+      "predicate": {
+        "kakugane:form": 7
+      },
+      "model": "kakugane:item/gauntlets"
+    },
+    {
+      "predicate": {
+        "kakugane:form": 8
+      },
+      "model": "kakugane:item/greaves"
+    },
+    {
+      "predicate": {
+        "kakugane:form": 9
+      },
+      "model": "kakugane:item/mantle"
+    },
+    {
+      "predicate": {
+        "kakugane:form": 10
+      },
+      "model": "kakugane:item/blade_belt"
     }
   ]
 }

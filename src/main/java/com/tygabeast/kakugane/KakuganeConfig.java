@@ -9,6 +9,8 @@ import net.neoforged.neoforge.common.ModConfigSpec;
  */
 public final class KakuganeConfig {
     public enum Rarity { RARE, STANDARD, COMMON, CUSTOM }
+    public enum LabGrowth { PRESENCE, DISCOVERY, ALWAYS }
+    public enum FlightMode { TRUE_FLIGHT, GLIDE, OFF }
 
     public static final ModConfigSpec SPEC;
 
@@ -30,6 +32,15 @@ public final class KakuganeConfig {
     public static final ModConfigSpec.DoubleValue CUSTOM_LAB_CHANCE;
     public static final ModConfigSpec.IntValue LAB_DAYS_PER_STAGE;
     public static final ModConfigSpec.BooleanValue LAB_OUTBREAKS;
+    public static final ModConfigSpec.EnumValue<LabGrowth> LAB_GROWTH;
+    public static final ModConfigSpec.IntValue LAB_DISCOVERY_RANGE;
+    public static final ModConfigSpec.IntValue LAB_OUTBREAK_RANGE;
+    // Worn forms
+    public static final ModConfigSpec.EnumValue<FlightMode> FLIGHT_MODE;
+    public static final ModConfigSpec.IntValue WING_RESERVE_SECONDS;
+    public static final ModConfigSpec.IntValue WING_REFILL_SECONDS;
+    public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> FLIGHT_BLACKLIST;
+    public static final ModConfigSpec.BooleanValue BLADE_AUTO_STRIKES;
     // Debug
     public static final ModConfigSpec.BooleanValue DEBUG;
 
@@ -74,11 +85,33 @@ public final class KakuganeConfig {
         CUSTOM_LAB_CHANCE = b.comment("Chance a lab site actually gets a lab when rarity = CUSTOM (RARE 0.5, STANDARD 0.75, COMMON 1.0).",
                         "Labs exist at every preset. Only affects newly generated chunks.")
                 .defineInRange("customLabChance", 0.75, 0.0, 1.0);
-        LAB_DAYS_PER_STAGE = b.comment("In-game days, counted only while a player is at the lab, for an uncleared lab to grow a stage",
+        LAB_DAYS_PER_STAGE = b.comment("In-game days for an uncleared lab to grow a stage",
                         "(Dormant, Active: vats regrow and guards return, Spreading: night outbreaks, Overrun: bigger outbreaks).")
                 .defineInRange("daysPerStage", 3, 1, 100);
-        LAB_OUTBREAKS = b.comment("Whether labs at the Spreading stage or later send Homunculi out to the surface at night.")
+        LAB_OUTBREAKS = b.comment("Whether labs at the Spreading stage or later send Homunculi out at night.")
                 .define("outbreaks", true);
+        LAB_GROWTH = b.comment("When labs grow. PRESENCE: only while a player is at the lab.",
+                        "DISCOVERY (default): from the moment a player first comes near it, whether or not anyone is there.",
+                        "ALWAYS: from when the lab is first loaded, with a first stage that takes twice as long.")
+                .defineEnum("growth", LabGrowth.DISCOVERY);
+        LAB_DISCOVERY_RANGE = b.comment("How close (in blocks) a player must come to a lab to discover it.")
+                .defineInRange("discoveryRange", 48, 8, 256);
+        LAB_OUTBREAK_RANGE = b.comment("Labs growing while nobody is there send their night outbreaks toward players within this many blocks.")
+                .defineInRange("outbreakRange", 192, 32, 1024);
+        b.pop();
+
+        b.push("worn_forms");
+        FLIGHT_MODE = b.comment("Alice in Wonderland's wings. TRUE_FLIGHT: real flight on a reserve that refills on the ground.",
+                        "GLIDE: the wings only slow your fall. OFF: no flight at all.")
+                .defineEnum("flightMode", FlightMode.TRUE_FLIGHT);
+        WING_RESERVE_SECONDS = b.comment("Seconds of level flight a tier 0 reserve holds (each tier adds a third more).")
+                .defineInRange("wingReserveSeconds", 30, 5, 3600);
+        WING_REFILL_SECONDS = b.comment("Seconds on the ground to refill an empty reserve at tier 0 (each tier is faster).")
+                .defineInRange("wingRefillSeconds", 6, 1, 600);
+        FLIGHT_BLACKLIST = b.comment("Dimensions where the wings can't fly (they still slow your fall), e.g. [\"minecraft:the_end\"].")
+                .defineListAllowEmpty("flightDimensionBlacklist", java.util.List.of(), () -> "minecraft:the_end", o -> o instanceof String);
+        BLADE_AUTO_STRIKES = b.comment("Whether the Blade Belt's arms also strike nearby enemies on their own during a fight.")
+                .define("bladeBeltAutoStrikes", true);
         b.pop();
 
         DEBUG = b.comment("Print extra information to the log.").define("debug", false);

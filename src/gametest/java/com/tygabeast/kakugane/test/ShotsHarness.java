@@ -29,7 +29,7 @@ public final class ShotsHarness {
     private static final boolean ON = !MODE.isEmpty();
     private static final float YAW = 0f;
     private static int tick = -1;
-    private static Float bodyOffset;
+    static Float bodyOffset;
     private static final List<Step> STEPS = new ArrayList<>();
 
     record Step(int at, Consumer<Minecraft> action) {}
@@ -122,11 +122,15 @@ public final class ShotsHarness {
             for (Step s : LabShots.STEPS) if (s.at == tick) s.action.accept(mc);
             return;
         }
+        if (MODE.equals("worn")) {
+            for (Step s : WornShots.STEPS) if (s.at == tick) s.action.accept(mc);
+            return;
+        }
         for (Step s : STEPS) if (s.at == tick) s.action.accept(mc);
     }
 
     /** Third person from the front with the body turned 40 degrees, zoomed in (FOV 30) and without the HUD. */
-    private static void thirdPerson(Minecraft mc) {
+    static void thirdPerson(Minecraft mc) {
         mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
         mc.options.fov().set(30);
         mc.options.hideGui = true;

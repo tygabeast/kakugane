@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "kakugane:item/mantle",
+    "layer1": "kakugane:item/mantle_accent"
+  }
+}

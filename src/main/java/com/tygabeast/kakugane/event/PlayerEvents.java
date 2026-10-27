@@ -3,6 +3,7 @@ package com.tygabeast.kakugane.event;
 import com.tygabeast.kakugane.Kakugane;
 import com.tygabeast.kakugane.ability.Lance;
 import com.tygabeast.kakugane.ability.TraitEffects;
+import com.tygabeast.kakugane.ability.WornAbilities;
 import com.tygabeast.kakugane.command.KakuganeCommand;
 import com.tygabeast.kakugane.core.ActiveForms;
 import com.tygabeast.kakugane.core.Affinity;
@@ -11,7 +12,8 @@ import com.tygabeast.kakugane.core.KakuganeAccess;
 import com.tygabeast.kakugane.core.PlayerState;
 import com.tygabeast.kakugane.data.KakuganeData;
 import com.tygabeast.kakugane.item.KakuganeItem;
-import com.tygabeast.kakugane.item.SilverSkinArmorItem;
+import com.tygabeast.kakugane.item.FormArmorItem;
+import com.tygabeast.kakugane.item.FormCurioItem;
 import com.tygabeast.kakugane.registry.ModRegistry;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -33,16 +35,22 @@ public final class PlayerEvents {
 
     /**
      * Per-tick work, kept to the minimum: players with nothing active and no dash return after two field
-     * reads. Dashes tick every tick (only for their 10 ticks); everything else runs once a second.
+     * reads. Dashes tick every tick (only for their 10 ticks); worn forms do their own small per-tick work (see
+     * ability/WornAbilities); everything else runs once a second.
      */
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         if (!(event.getEntity() instanceof ServerPlayer p) || !p.hasData(ModRegistry.STATE.get())) return;
         PlayerState st = p.getData(ModRegistry.STATE.get());
         if (st.dashTicks > 0) Lance.tickDash(p, st);
-        if (!st.hasActive() || p.tickCount % 20 != 0) return;
+        if (!st.hasActive()) return;
+        long now = Affinity.now(p);
+        if (st.activeForm.worn()) WornAbilities.tick(p, st, now);
+        if (p.tickCount % 20 != 0) return;
         ActiveForms.validate(p, st);
-        if (st.hasActive()) TraitEffects.tickPassive(p, st, Affinity.now(p));
+        if (!st.hasActive()) return;
+        TraitEffects.tickPassive(p, st, now);
+        WornAbilities.tickSecond(p, st, now);
     }
 
     @SubscribeEvent
@@ -80,7 +88,7 @@ public final class PlayerEvents {
     public static void onToss(ItemTossEvent event) {
         if (!(event.getPlayer() instanceof ServerPlayer p)) return;
         ItemStack s = event.getEntity().getItem();
-        if (s.getItem() instanceof SilverSkinArmorItem) {
+        if (s.getItem() instanceof FormArmorItem || s.getItem() instanceof FormCurioItem) {
             event.setCanceled(true);
             return;
         }
@@ -105,7 +113,7 @@ public final class PlayerEvents {
         Iterator<ItemEntity> it = event.getDrops().iterator();
         while (it.hasNext()) {
             ItemStack s = it.next().getItem();
-            if (s.getItem() instanceof SilverSkinArmorItem) {
+            if (s.getItem() instanceof FormArmorItem || s.getItem() instanceof FormCurioItem) {
                 it.remove();
             } else if (s.getItem() instanceof KakuganeItem) {
                 KakuganeData d = KakuganeAccess.data(s);

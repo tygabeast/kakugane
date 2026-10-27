@@ -24,7 +24,9 @@ import net.minecraft.world.level.material.MapColor;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import com.tygabeast.kakugane.item.EmbryoItem;
 import com.tygabeast.kakugane.item.KakuganeItem;
-import com.tygabeast.kakugane.item.SilverSkinArmorItem;
+import com.tygabeast.kakugane.data.Archetype;
+import com.tygabeast.kakugane.item.FormArmorItem;
+import com.tygabeast.kakugane.item.FormCurioItem;
 import com.tygabeast.kakugane.world.HomunculusSpawnModifier;
 import com.mojang.serialization.Codec;
 import net.minecraft.Util;
@@ -73,7 +75,7 @@ public final class ModRegistry {
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<ItemContainerContents>> STORED_ARMOR =
             COMPONENTS.registerComponentType("stored_armor", b -> b.persistent(ItemContainerContents.CODEC).networkSynchronized(ItemContainerContents.STREAM_CODEC));
 
-    /** On a Silver Skin piece: serial of the Kakugane it belongs to. */
+    /** On a worn-form piece: serial of the Kakugane it belongs to. */
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> FORM_LINK =
             COMPONENTS.registerComponentType("form_link", b -> b.persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT));
 
@@ -96,6 +98,22 @@ public final class ModRegistry {
                     List.of(new ArmorMaterial.Layer(Kakugane.id("silver_skin")),
                             new ArmorMaterial.Layer(Kakugane.id("silver_skin"), "_accent", true)),
                     3.0f, 0.1f));
+
+    public static final DeferredHolder<ArmorMaterial, ArmorMaterial> GREAVES_MATERIAL = ARMOR_MATERIALS.register("greaves",
+            () -> new ArmorMaterial(
+                    Util.make(new EnumMap<>(ArmorItem.Type.class), m -> {
+                        m.put(ArmorItem.Type.BOOTS, 0);
+                        m.put(ArmorItem.Type.LEGGINGS, 4);
+                        m.put(ArmorItem.Type.CHESTPLATE, 0);
+                        m.put(ArmorItem.Type.HELMET, 0);
+                        m.put(ArmorItem.Type.BODY, 0);
+                    }),
+                    0,
+                    SoundEvents.ARMOR_EQUIP_IRON,
+                    () -> Ingredient.EMPTY,
+                    List.of(new ArmorMaterial.Layer(Kakugane.id("greaves")),
+                            new ArmorMaterial.Layer(Kakugane.id("greaves"), "_accent", true)),
+                    1.0f, 0f));
 
     // ---- Entities ------------------------------------------------------------------------------------
     public static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(Registries.ENTITY_TYPE, Kakugane.MODID);
@@ -143,10 +161,18 @@ public final class ModRegistry {
             () -> new KakuganeItem(new Item.Properties().stacksTo(1).rarity(Rarity.RARE).fireResistant()));
     public static final DeferredItem<EmbryoItem> EMBRYO = ITEMS.register("homunculus_embryo",
             () -> new EmbryoItem(new Item.Properties().stacksTo(16).rarity(Rarity.UNCOMMON)));
-    public static final DeferredItem<SilverSkinArmorItem> SILVER_SKIN_HELMET = silverSkin("silver_skin_helmet", ArmorItem.Type.HELMET);
-    public static final DeferredItem<SilverSkinArmorItem> SILVER_SKIN_CHESTPLATE = silverSkin("silver_skin_chestplate", ArmorItem.Type.CHESTPLATE);
-    public static final DeferredItem<SilverSkinArmorItem> SILVER_SKIN_LEGGINGS = silverSkin("silver_skin_leggings", ArmorItem.Type.LEGGINGS);
-    public static final DeferredItem<SilverSkinArmorItem> SILVER_SKIN_BOOTS = silverSkin("silver_skin_boots", ArmorItem.Type.BOOTS);
+    public static final DeferredItem<FormArmorItem> SILVER_SKIN_HELMET = silverSkin("silver_skin_helmet", ArmorItem.Type.HELMET);
+    public static final DeferredItem<FormArmorItem> SILVER_SKIN_CHESTPLATE = silverSkin("silver_skin_chestplate", ArmorItem.Type.CHESTPLATE);
+    public static final DeferredItem<FormArmorItem> SILVER_SKIN_LEGGINGS = silverSkin("silver_skin_leggings", ArmorItem.Type.LEGGINGS);
+    public static final DeferredItem<FormArmorItem> SILVER_SKIN_BOOTS = silverSkin("silver_skin_boots", ArmorItem.Type.BOOTS);
+    public static final DeferredItem<FormArmorItem> GREAVES = ITEMS.register("greaves",
+            () -> new FormArmorItem(Archetype.GREAVES, GREAVES_MATERIAL, ArmorItem.Type.LEGGINGS, new Item.Properties().stacksTo(1)));
+    // Worn-form pieces that go in Curios slots (see core/WornForms).
+    public static final DeferredItem<FormCurioItem> AERIAL_OPERATOR = curioPiece("aerial_operator", Archetype.AERIAL_OPERATOR, "head");
+    public static final DeferredItem<FormCurioItem> ALICE_WINGS = curioPiece("alice_wings", Archetype.ALICE, "back");
+    public static final DeferredItem<FormCurioItem> GAUNTLETS = curioPiece("gauntlets", Archetype.GAUNTLETS, "hands");
+    public static final DeferredItem<FormCurioItem> MANTLE = curioPiece("mantle", Archetype.MANTLE, "back");
+    public static final DeferredItem<FormCurioItem> BLADE_BELT = curioPiece("blade_belt", Archetype.BLADE_BELT, "belt");
     public static final DeferredItem<DeferredSpawnEggItem> HOUND_SPAWN_EGG = ITEMS.register("hound_spawn_egg",
             () -> new DeferredSpawnEggItem(HOUND, 0x34373D, 0xB3202A, new Item.Properties()));
     public static final DeferredItem<DeferredSpawnEggItem> RAM_SPAWN_EGG = ITEMS.register("ram_spawn_egg",
@@ -156,8 +182,12 @@ public final class ModRegistry {
     public static final DeferredItem<DeferredSpawnEggItem> LAB_LEADER_SPAWN_EGG = ITEMS.register("lab_leader_spawn_egg",
             () -> new DeferredSpawnEggItem(LAB_LEADER, 0xE6E6E0, 0x9E1B2B, new Item.Properties()));
 
-    private static DeferredItem<SilverSkinArmorItem> silverSkin(String name, ArmorItem.Type type) {
-        return ITEMS.register(name, () -> new SilverSkinArmorItem(SILVER_SKIN_MATERIAL, type, new Item.Properties().stacksTo(1)));
+    private static DeferredItem<FormArmorItem> silverSkin(String name, ArmorItem.Type type) {
+        return ITEMS.register(name, () -> new FormArmorItem(Archetype.SILVER_SKIN, SILVER_SKIN_MATERIAL, type, new Item.Properties().stacksTo(1)));
+    }
+
+    private static DeferredItem<FormCurioItem> curioPiece(String name, Archetype form, String slot) {
+        return ITEMS.register(name, () -> new FormCurioItem(form, slot, new Item.Properties().stacksTo(1).fireResistant()));
     }
 
     // ---- Attachments: extra data stored on players ---------------------------------------------------

@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "kakugane:item/greaves",
+    "layer1": "kakugane:item/greaves_accent"
+  }
+}

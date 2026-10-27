@@ -178,6 +178,47 @@ final class LabShots {
             labCmd(s, in, "kakugane lab advance");
             Kakugane.LOGGER.info("[labs] after advance: vat0 regrown={} vat1 regrown={}",
                     level.getBlockState(vats.get(0)).is(ModRegistry.EMBRYO_VAT.get()), level.getBlockState(vats.get(1)).is(ModRegistry.EMBRYO_VAT.get()));
+        }));
+        // Away: wind the lab's clock six days on, walk 150 blocks off at night (in survival, so outbreaks can find us),
+        // and check the lab grew without anyone there and sent a pack after us.
+        tt += 40;
+        at(tt, mc -> ShotsHarness.server(mc, (s, p) -> {
+            ServerLevel level = s.overworld();
+            LabTracker.Lab rec = LabTracker.get(level).record(lab);
+            Kakugane.LOGGER.info("[labs] before away: tracked={} stage={} days={}", rec.tracked, rec.stage, rec.days);
+            rec.growthStart -= 6 * 24000L;
+            BlockPos c = lab.getBoundingBox().getCenter();
+            level.getChunk((c.getX() + 150) >> 4, c.getZ() >> 4); // load it first, or the height map reads as empty
+            BlockPos away = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, c.offset(150, 0, 0));
+            p.setGameMode(GameType.SURVIVAL);
+            cmd(s, "effect give " + p.getGameProfile().getName() + " minecraft:resistance infinite 4 true");
+            cmd(s, "time set 18000");
+            p.teleportTo(level, away.getX() + 0.5, away.getY() + 1, away.getZ() + 0.5, 270f, 0f);
+        }));
+        at(tt + 1, mc -> ShotsHarness.settle());
+        at(tt + 230, mc -> ShotsHarness.server(mc, (s, p) -> {
+            ServerLevel level = s.overworld();
+            LabTracker.Lab rec = LabTracker.get(level).record(lab);
+            int pack = level.getEntitiesOfClass(Mob.class, p.getBoundingBox().inflate(48), m -> m.getType().is(com.tygabeast.kakugane.registry.ModTags.HOMUNCULI)).size();
+            Kakugane.LOGGER.info("[labs] away: stage={} days={} grewUnseen={} homunculi near player={} player at {}", rec.stage, rec.days, rec.grewUnseen, pack, p.blockPosition());
+            for (Mob m : level.getEntitiesOfClass(Mob.class, p.getBoundingBox().inflate(160), m -> m.getType().is(com.tygabeast.kakugane.registry.ModTags.HOMUNCULI)))
+                Kakugane.LOGGER.info("[labs]   {} at {} removed={} target={}", m.getType().getDescriptionId(), m.blockPosition(), m.isRemoved(), m.getTarget() == p);
+            cmd(s, "time set 6000");
+            LabPiece hub = room(LabPiece.Room.HUB);
+            Vec3 in = Vec3.atCenterOf(hub.getBoundingBox().getCenter());
+            p.setGameMode(GameType.CREATIVE);
+            p.teleportTo(level, in.x, hub.getBoundingBox().minY() + 1, in.z, 0f, 0f);
+        }));
+        at(tt + 231, mc -> ShotsHarness.settle());
+        // Back at the lab: the next tracker pass should announce the growth and pay out the vats and guards owed.
+        at(tt + 470, mc -> ShotsHarness.server(mc, (s, p) -> {
+            ServerLevel level = s.overworld();
+            LabTracker.Lab rec = LabTracker.get(level).record(lab);
+            Kakugane.LOGGER.info("[labs] back: stage={} announced={} regrowOwed={} restockOwed={}", rec.stage, rec.announced, rec.regrowOwed, rec.restockOwed);
+            LabPiece hub = room(LabPiece.Room.HUB);
+            Vec3 in = Vec3.atCenterOf(hub.getBoundingBox().getCenter());
+            List<BlockPos> vats = new ArrayList<>();
+            for (StructurePiece piece : lab.getPieces()) if (piece instanceof LabPiece lp) lp.forEachVat(vats::add);
             for (BlockPos v : vats) level.setBlock(v, Blocks.AIR.defaultBlockState(), 3);
             labCmd(s, in, "kakugane lab");
             for (LabLeader l : level.getEntitiesOfClass(LabLeader.class, net.minecraft.world.phys.AABB.of(lab.getBoundingBox()))) {
@@ -185,6 +226,7 @@ final class LabShots {
             }
             labCmd(s, in, "kakugane lab");
         }));
+        tt += 470;
         at(tt + 40, Minecraft::stop);
     }
 

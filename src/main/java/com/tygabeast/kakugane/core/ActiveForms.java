@@ -1,6 +1,6 @@
 package com.tygabeast.kakugane.core;
 
-import com.tygabeast.kakugane.ability.SilverSkin;
+import com.tygabeast.kakugane.ability.WornAbilities;
 import com.tygabeast.kakugane.data.Archetype;
 import com.tygabeast.kakugane.data.KakuganeData;
 import com.tygabeast.kakugane.data.Trait;
@@ -25,7 +25,7 @@ import java.util.Optional;
  *  - a Kakugane bonds to the first player who activates it; it refuses anyone else while bonded
  *  - an unformed Kakugane takes its form from the player's affinity once there is enough combat recorded
  *  - only one Kakugane is active at a time (activating a second reverts the first)
- *  - held forms only stay active in the hand; worn forms take the armor slots and give the old armor back
+ *  - held forms become the item itself; worn forms take over armor or Curios slots and give back what was there
  */
 public final class ActiveForms {
 
@@ -52,17 +52,24 @@ public final class ActiveForms {
     public static boolean activateStack(ServerPlayer p, ItemStack stack) {
         KakuganeData d = ensureSerial(p, stack, KakuganeAccess.data(stack));
         if (d.heart()) return false;
+        // Still marked active (it came back from a chest, say): revert it properly first, which hands back
+        // whatever it was storing, so equipping again can't overwrite that.
+        if (d.active()) {
+            deactivateStack(p, stack);
+            d = KakuganeAccess.data(stack);
+        }
         SerialRegistry.get(p.server).mark(d.serial()); // serials from other worlds count as taken here
         Prepared pr = prepare(p, d);
         stack.set(ModRegistry.KAKUGANE_DATA.get(), pr.data);
         if (!pr.proceed) return false;
+        if (!canWear(p, pr.data)) return false;
 
         deactivate(p); // one active at a time
         d = pr.data.withActive(true);
         stack.set(ModRegistry.KAKUGANE_DATA.get(), d);
         Archetype form = d.form().orElseThrow();
         if (form.worn()) {
-            SilverSkin.equip(p, stack, d);
+            WornForms.equip(p, stack, d);
         } else {
             stack.set(DataComponents.ATTRIBUTE_MODIFIERS, KakuganeItem.heldModifiers(d));
         }
@@ -76,7 +83,7 @@ public final class ActiveForms {
         if (!h.has()) return;
         Prepared pr = prepare(p, h.data());
         h.stack.set(ModRegistry.KAKUGANE_DATA.get(), pr.data);
-        if (!pr.proceed) return;
+        if (!pr.proceed || !canWear(p, pr.data)) return;
 
         Archetype form = pr.data.form().orElseThrow();
         if (!form.worn() && !p.getMainHandItem().isEmpty()) {
@@ -87,7 +94,7 @@ public final class ActiveForms {
         KakuganeData d = pr.data.withActive(true);
         h.stack.set(ModRegistry.KAKUGANE_DATA.get(), d);
         if (form.worn()) {
-            SilverSkin.equip(p, h.stack, d);
+            WornForms.equip(p, h.stack, d);
         } else {
             ItemStack projection = h.stack.copy();
             projection.set(DataComponents.ATTRIBUTE_MODIFIERS, KakuganeItem.heldModifiers(d));
@@ -103,13 +110,13 @@ public final class ActiveForms {
         int serial = st.activeSerial;
         boolean heart = st.activeHeart;
         Archetype form = st.activeForm;
-        st.clearActive();
+        endActive(p, st);
         st.dashTicks = 0;
 
         if (heart) {
             HeartData h = KakuganeAccess.heart(p);
             if (h.matches(serial)) {
-                if (form.worn()) SilverSkin.unequip(p, h.stack);
+                if (form.worn()) WornForms.unequip(p, h.stack);
                 h.stack.set(ModRegistry.KAKUGANE_DATA.get(), h.data().withActive(false));
             }
             KakuganeAccess.removeProjections(p, serial);
@@ -118,7 +125,7 @@ public final class ActiveForms {
             if (s != null) {
                 revertStack(p, s);
             } else if (form.worn()) {
-                SilverSkin.stripPieces(p, serial); // the plate is gone; at least take the armor off
+                WornForms.stripPieces(p, serial); // the plate is gone; at least take the pieces off
             }
         }
         p.level().playSound(null, p.blockPosition(), SoundEvents.ARMOR_EQUIP_CHAIN.value(), SoundSource.PLAYERS, 0.8f, 0.7f);
@@ -132,14 +139,14 @@ public final class ActiveForms {
         KakuganeData d = KakuganeAccess.data(stack);
         if (!d.active()) return;
         PlayerState st = KakuganeAccess.state(p);
-        if (st.hasActive() && !st.activeHeart && st.activeSerial == d.serial()) st.clearActive();
+        if (st.hasActive() && !st.activeHeart && st.activeSerial == d.serial()) endActive(p, st);
         revertStack(p, stack);
     }
 
     private static void revertStack(ServerPlayer p, ItemStack s) {
         KakuganeData d = KakuganeAccess.data(s);
         if (d.form().map(Archetype::worn).orElse(false)) {
-            SilverSkin.unequip(p, s);
+            WornForms.unequip(p, s);
         } else {
             s.remove(DataComponents.ATTRIBUTE_MODIFIERS);
         }
@@ -174,6 +181,8 @@ public final class ActiveForms {
                 revertStack(p, s); // a second active one, or one that is not ours
             }
         }
+        // Flight the wings granted before a relog or crash goes, unless the wings are still on (portals, rejoin).
+        WornAbilities.cleanUpAfterRejoin(p, st);
     }
 
     /**
@@ -188,7 +197,7 @@ public final class ActiveForms {
         if (st.activeHeart) {
             HeartData h = KakuganeAccess.heart(p);
             if (!h.matches(serial) || !h.data().active()) {
-                st.clearActive();
+                endActive(p, st);
                 return;
             }
             present = st.activeForm.worn() || KakuganeAccess.hasProjection(p, serial);
@@ -205,11 +214,28 @@ public final class ActiveForms {
             return;
         }
         Archetype form = st.activeForm;
+        endActive(p, st);
+        if (form.worn()) WornForms.stripPieces(p, serial);
+    }
+
+    /**
+     * Ends the running form's abilities (flight, night vision, stealth) and then forgets it. Every path that stops
+     * a live form goes through here, so nothing an ability granted can outlive the form.
+     */
+    private static void endActive(ServerPlayer p, PlayerState st) {
+        WornAbilities.end(p, st, st.activeForm);
         st.clearActive();
-        if (form.worn()) SilverSkin.stripPieces(p, serial);
     }
 
     // ---- internals ----------------------------------------------------------------------------------
+
+    /** A worn form needs its slot to exist (a modpack can disable Curios slots). */
+    private static boolean canWear(ServerPlayer p, KakuganeData d) {
+        Archetype form = d.form().orElse(null);
+        if (form == null || !form.worn() || WornForms.canWear(p, form)) return true;
+        tell(p, Component.translatable("message.kakugane.no_slot", form.displayName()));
+        return false;
+    }
 
     private record Prepared(KakuganeData data, boolean proceed) {}
 
@@ -254,6 +280,8 @@ public final class ActiveForms {
         st.activeTrait = d.traitValue().orElse(null);
         st.activeTier = d.tier();
         st.activeHeart = heart;
+        // Greaves put on in mid-air start with their dashes, matching the client (which counts its own).
+        if (st.activeForm == Archetype.GREAVES) st.airDashes = com.tygabeast.kakugane.ability.Greaves.maxDashes(st.activeTier);
     }
 
     /** Gives a fresh Kakugane its serial the first time the server sees it. */
