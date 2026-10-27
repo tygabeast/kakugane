@@ -1,0 +1,56 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "kakugane:item/kakugane_plate",
+    "layer1": "kakugane:item/kakugane_plate_accent"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "kakugane:form": 1
+      },
+      "model": "kakugane:item/form_lance"
+    },
+    {
+      "predicate": {
+        "kakugane:form": 2
+      },
+      "model": "kakugane:item/form_bow"
+    },
+    {
+      "predicate": {
+        "kakugane:form": 2,
+        "kakugane:pulling": 1
+      },
+      "model": "kakugane:item/form_bow_pulling_0"
+    },
+    {
+      "predicate": {
+        "kakugane:form": 2,
+        "kakugane:pulling": 1,
+        "kakugane:pull": 0.65
+      },
+      "model": "kakugane:item/form_bow_pulling_1"
+    },
+    {
+      "predicate": {
+        "kakugane:form": 2,
+        "kakugane:pulling": 1,
+        "kakugane:pull": 0.9
+      },
+      "model": "kakugane:item/form_bow_pulling_2"
+    },
+    {
+      "predicate": {
+        "kakugane:form": 3
+      },
+      "model": "kakugane:item/form_breaker"
+    },
+    {
+      "predicate": {
+        "kakugane:form": 4
+      },
+      "model": "kakugane:item/form_silver_skin"
+    }
+  ]
+}

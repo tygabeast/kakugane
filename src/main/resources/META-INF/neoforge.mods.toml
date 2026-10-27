@@ -1,0 +1,28 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="All Rights Reserved"
+issueTrackerURL=""
+
+[[mods]]
+modId="kakugane"
+version="0.1.0"
+displayName="Kakugane"
+authors="Tygabeast"
+description='''
+Alchemical plates that transform into a weapon or armor shaped by how you fight, inspired by Buso Renkin.
+Hunt Homunculi, earn milestones, and deepen or re-temper your Kakugane.
+'''
+
+[[dependencies.kakugane]]
+modId="neoforge"
+type="required"
+versionRange="[21.1.200,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.kakugane]]
+modId="minecraft"
+type="required"
+versionRange="[1.21.1,1.21.2)"
+ordering="NONE"
+side="BOTH"

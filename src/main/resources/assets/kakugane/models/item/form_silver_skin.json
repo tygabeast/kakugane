@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "kakugane:item/kakugane_plate_active",
+    "layer1": "kakugane:item/kakugane_plate_active_accent"
+  }
+}

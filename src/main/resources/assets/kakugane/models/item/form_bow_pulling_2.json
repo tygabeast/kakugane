@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/bow",
+  "textures": {
+    "layer0": "kakugane:item/form_bow_pulling_2",
+    "layer1": "kakugane:item/form_bow_pulling_2_accent"
+  }
+}

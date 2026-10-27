@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "kakugane:item/silver_skin_helmet",
+    "layer1": "kakugane:item/silver_skin_helmet_accent"
+  }
+}

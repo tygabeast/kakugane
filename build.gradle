@@ -1,0 +1,53 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+version = mod_version
+group = 'com.tygabeast.kakugane'
+base { archivesName = 'kakugane' }
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    version = project.neo_version
+    runs {
+        server {
+            server()
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'kakugane'
+        }
+    }
+    mods {
+        kakugane { sourceSet sourceSets.main }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+// Automated server-side tests (not part of the released jar): gradle runGameTestServer
+sourceSets {
+    gametest {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+neoForge {
+    addModdingDependenciesTo sourceSets.gametest
+    mods {
+        kakugane { sourceSet sourceSets.gametest }
+    }
+    runs {
+        gameTestServer {
+            type = 'gameTestServer'
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'kakugane'
+            sourceSet = sourceSets.gametest
+        }
+    }
+}
+
+jar {
+    from('README.md')
+}

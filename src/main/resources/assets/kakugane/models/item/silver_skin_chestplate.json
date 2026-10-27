@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "kakugane:item/silver_skin_chestplate",
+    "layer1": "kakugane:item/silver_skin_chestplate_accent"
+  }
+}
