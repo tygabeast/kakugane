@@ -11,12 +11,10 @@
   "item.kakugane.hound_spawn_egg": "Hound Spawn Egg",
   "entity.kakugane.hound": "Hound",
   "entity.kakugane.alchemic_arrow": "Alchemic Arrow",
-
   "archetype.kakugane.lance": "Lance",
   "archetype.kakugane.bow": "Bow",
   "archetype.kakugane.breaker": "Breaker",
   "archetype.kakugane.silver_skin": "Silver Skin",
-
   "trait.kakugane.vampiric": "Vampiric",
   "trait.kakugane.vampiric.desc": "heals a little of the damage dealt",
   "trait.kakugane.impact": "Impact",
@@ -45,7 +43,6 @@
   "trait.kakugane.featherfall.desc": "less fall damage",
   "trait.kakugane.attuned": "Attuned",
   "trait.kakugane.attuned.desc": "senses nearby Homunculi",
-
   "palette.kakugane.steel": "Steel",
   "palette.kakugane.gold": "Gold",
   "palette.kakugane.crimson": "Crimson",
@@ -54,7 +51,6 @@
   "palette.kakugane.violet": "Violet",
   "palette.kakugane.ivory": "Ivory",
   "palette.kakugane.copper": "Copper",
-
   "tooltip.kakugane.heart": "Your heart",
   "tooltip.kakugane.unformed": "Unformed",
   "tooltip.kakugane.form": "Form: %s (Tier %s)",
@@ -66,7 +62,6 @@
   "tooltip.kakugane.lineage": "Wielders: %s",
   "tooltip.kakugane.milestones": "Milestones: %s/3 (embryos destroyed: %s)",
   "tooltip.kakugane.pending": "A milestone is ready. Use /kakugane choose",
-
   "message.kakugane.hold_one": "Hold a Kakugane to activate it.",
   "message.kakugane.heart_hand_full": "Empty your main hand to call on your heart.",
   "message.kakugane.bonded_other": "This Kakugane is bonded to %s.",
@@ -86,15 +81,39 @@
   "message.kakugane.deepened": "Kakugane %s deepens to tier %s.",
   "message.kakugane.retempered": "Kakugane %s is re-tempered into %s.",
   "message.kakugane.heart_saved": "Kakugane %s takes the place of your heart.",
-
   "command.kakugane.affinity.header": "Combat recorded: %s of %s needed to imprint",
   "command.kakugane.unknown_form": "Unknown form.",
   "command.kakugane.done": "Done.",
   "command.kakugane.no_active": "%s has no active Kakugane.",
-
   "key.categories.kakugane": "Kakugane",
   "key.kakugane.activate": "Buso Renkin (activate / revert)",
-
   "death.attack.kakugane.buso_renkin": "%1$s was struck down by a Kakugane",
-  "death.attack.kakugane.buso_renkin.player": "%1$s was struck down by %2$s's Kakugane"
+  "death.attack.kakugane.buso_renkin.player": "%1$s was struck down by %2$s's Kakugane",
+  "entity.kakugane.ram": "Ram",
+  "entity.kakugane.crawler": "Crawler",
+  "entity.kakugane.lab_leader": "Homunculus Leader",
+  "entity.kakugane.lab_leader.hound": "Homunculus Leader (Hound)",
+  "entity.kakugane.lab_leader.ram": "Homunculus Leader (Ram)",
+  "entity.kakugane.lab_leader.crawler": "Homunculus Leader (Crawler)",
+  "entity.kakugane.web_shot": "Web",
+  "item.kakugane.ram_spawn_egg": "Ram Spawn Egg",
+  "item.kakugane.crawler_spawn_egg": "Crawler Spawn Egg",
+  "item.kakugane.lab_leader_spawn_egg": "Homunculus Leader Spawn Egg",
+  "block.kakugane.embryo_vat": "Embryo Vat",
+  "message.kakugane.lab_stage_0": "The lab is quiet.",
+  "message.kakugane.lab_stage_1": "Something stirs in the vats. The lab is waking.",
+  "message.kakugane.lab_stage_2": "The lab is spreading. Its Homunculi will hunt the surface at night.",
+  "message.kakugane.lab_stage_3": "The lab is overrun.",
+  "message.kakugane.stage_name_0": "Dormant",
+  "message.kakugane.stage_name_1": "Active",
+  "message.kakugane.stage_name_2": "Spreading",
+  "message.kakugane.stage_name_3": "Overrun",
+  "message.kakugane.lab_leader_down": "The Homunculus Leader is dead. The lab will grow no further.",
+  "message.kakugane.lab_cleared": "The last vat is broken. The lab falls silent.",
+  "command.kakugane.lab.none": "You're not in a lab.",
+  "command.kakugane.lab.info": "Lab: %s (day %s), vats %s/%s, leader %s (%s), %s",
+  "command.kakugane.lab.leader_alive": "alive",
+  "command.kakugane.lab.leader_dead": "dead",
+  "command.kakugane.lab.cleared": "cleared",
+  "command.kakugane.lab.active": "not cleared"
 }

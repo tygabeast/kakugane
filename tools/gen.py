@@ -683,6 +683,8 @@ def main():
     save(alchemic_arrow(), 'entity', 'alchemic_arrow.png')
 
     write_models()
+    import gen_wave2
+    gen_wave2.run(None if '--no-preview' in sys.argv else PREVIEW)
     if '--no-preview' not in sys.argv:
         previews({'items': items, 'embryo': emb, 'armor1': armor1, 'armor2': armor2, 'hound': hound})
     print('generated textures and models')

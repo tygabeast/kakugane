@@ -28,7 +28,7 @@ Each Kakugane's serial number gives it one of 8 palettes and one of 14 traits (h
 
 Each Kakugane has three milestones, one per deed, done with it active and in any order:
 - Destroy Homunculus embryos (right-click an embryo while your Kakugane is active; 10 by default)
-- Defeat a human-type Homunculus *(arrives in a later wave)*
+- Defeat a human-type Homunculus (a lab's Homunculus Leader counts)
 - Defeat an Elite Homunculus *(arrives in a later wave)*
 
 When one is reached, click **[Deepen]** (next tier: stronger form and trait) or **[Re-temper]** (reshape to your current affinity, tier unchanged) in chat.
@@ -40,8 +40,21 @@ Once ever per player: if you would die while carrying an unbonded Kakugane, it r
 ### Homunculi
 
 - **Hound:** pack hunter that leaps and pins. Hunts players and villagers. Drops embryos.
+- **Ram:** lowers its head, winds up and charges, knocking you back and leaving you slowed and weakened. Its front plating takes 60% less from hits within 60 degrees of its face, unless you hit it with an active Breaker. Flank it.
+- **Crawler:** a big spider-type that keeps its distance and spits webs that slow you (they never place cobweb blocks).
+- **Homunculus Leader:** looks human until it has a target or gets hurt, then shifts into a hybrid of its lab's beast (Hound, Ram or Crawler) with a boss bar. It regenerates unless it took alchemical damage in the last five seconds, calls nearby Homunculi to help, and summons two of its beasts once at half health. Each lab stage makes it tougher.
 - Homunculi take 75% less damage from anything that isn't alchemical (Kakugane forms, conjured arrows, or weapons in the `kakugane:alchemical_weapons` item tag).
-- Ambient spawning follows the rarity preset in the config. **Rare** (default) makes ambient Hounds almost absent; places and events that guarantee encounters arrive in later waves. Use the spawn egg to meet them now.
+- Ambient spawning follows the rarity preset in the config. **Rare** (default) makes ambient Hounds almost absent; labs are where you're sure to find Homunculi.
+
+### Hidden labs
+
+Look for a small ruin of mossy cobblestone and spruce logs with a trapdoor hatch in the middle. A ladder leads about 25 to 30 blocks down to a lab of 7 to 9 rooms joined by corridors: a hub, vat halls full of Embryo Vats, cell blocks, storage rooms, barracks, and the Leader's chamber, the room farthest from the ladder. Every lab is laid out differently. Storage and cells hold loot, sometimes a Kakugane.
+
+- Labs generate on dry land in most overworld biomes (not oceans, rivers or caves). How many candidate sites become labs depends on the rarity preset: half on Rare, three quarters on Standard, all on Common (or `customLabChance` on Custom). Labs exist at every preset.
+- **Embryo Vats** drop embryos when broken.
+- **Labs grow.** An uncleared lab advances a stage for every few in-game days (3 by default) that players spend at it: *Dormant*, then *Active* (broken vats regrow and guards return), *Spreading* (each night a small pack climbs out and roams the surface nearby) and *Overrun* (bigger packs). Labs don't grow while nobody is there, so popping in now and then barely moves them.
+- Killing the Leader stops the growth. Break every vat after that and the lab is **cleared** for good.
+- `/kakugane lab` while inside a lab shows its stage, vats left and the Leader's state.
 
 ## Commands
 
@@ -53,10 +66,13 @@ Once ever per player: if you would die while carrying an unbonded Kakugane, it r
 | `/kakugane affinity add <players> <form> <amount>` | Ops | Adds affinity (testing) |
 | `/kakugane deed <players> human\|embryo\|elite` | Ops | Credits a deed to the active Kakugane (testing) |
 | `/kakugane heart reset <players>` | Ops | Returns the heart as an item and allows a new one |
+| `/kakugane lab` | Everyone | Inside a lab: its stage, day, vats left, Leader alive or dead |
+| `/kakugane lab stage <0-3>` | Ops | Sets the lab's stage (testing) |
+| `/kakugane lab advance` | Ops | Runs one day of lab growth now (testing) |
 
 ## Config (`config/kakugane-common.toml`)
 
-Imprint threshold, no-choice weight, affinity half-life, serial cap, embryos per milestone, heart on/off, Homunculus damage reduction, rarity preset (RARE / STANDARD / COMMON / CUSTOM), custom Hound weight, Homunculus density cap, debug.
+Imprint threshold, no-choice weight, affinity half-life, serial cap, embryos per milestone, heart on/off, Homunculus damage reduction, rarity preset (RARE / STANDARD / COMMON / CUSTOM), custom Hound weight, Homunculus density cap, custom lab chance, days per lab stage, lab outbreaks on/off, debug (also logs where labs generate and why sites were turned down).
 
 ## Performance notes
 
@@ -65,14 +81,26 @@ Imprint threshold, no-choice weight, affinity half-life, serial cap, embryos per
 - Affinity, deeds and damage rules run only on hit and death events. Affinity fading is calculated from a timestamp when needed.
 - Spawn weights are read once at world load; the Homunculus density check runs only for Hound spawn attempts.
 - Form switching is a model override and an item component change; the Hound draws one extra emissive layer.
+- Labs are built once, when their chunks generate. Afterwards the lab tracker runs every 10 seconds and does one structure lookup per overworld player; growth, regrowth and outbreaks happen at most once per in-game day or night, and only at labs where a player is.
+- The Leader's regeneration and alerts are throttled (every 10 and 40 ticks). Ram and Crawler use vanilla-style goals that only run with a target.
+- The Lance charge indicator is client-side particles, spawned every other tick only while someone in view is charging.
 
 ## Building
 
-Requires Java 21. `gradle build` produces the jar in `build/libs`. `gradle runGameTestServer` runs the automated server-side tests in `src/gametest`. `python3 tools/gen.py` regenerates textures and item models (Pillow and NumPy). `python3 tools/pose_preview.py` solves and previews held-item poses. `gradle runShotsClient` (needs a display, or `xvfb-run`) starts a client that poses each form and saves screenshots to `run/screenshots`; it expects a world in `run/saves/shots`.
+Requires Java 21. `gradle build` produces the jar in `build/libs`. `gradle runGameTestServer` runs the automated server-side tests in `src/gametest`. `python3 tools/gen.py` regenerates textures and models (Pillow and NumPy; `tools/gen_wave2.py` holds the lab mobs and vat) and writes previews to `build/previews`. `python3 tools/pose_preview.py` solves and previews held-item poses. `gradle runShotsClient` (needs a display, or `xvfb-run`) starts a client that poses each form and saves screenshots to `run/screenshots`; it expects a world in `run/saves/shots`. `-Pshots=labs` instead tours the nearest lab (use a normal, not superflat, world), lines up every Homunculus, and runs the lab growth and clearing commands.
 
 ## License
 
 MIT (see `LICENSE`), covering the code and the original textures and models in this repository. *Buso Renkin* and its names belong to their owners; this is an unofficial fan mod.
+
+## 0.2.0 changes
+
+- **Hidden labs:** a new structure, a ruined shed over a ladder shaft into a 7 to 9 room underground complex with a randomized layout, Embryo Vats, loot and guards.
+- **New Homunculi:** Ram, Crawler and the Homunculus Leader (a boss whose hybrid form matches its lab's beast). Spawn eggs for each.
+- **Lab growth:** stages, vat regrowth, guard restocking, night outbreaks, and clearing. New `/kakugane lab` commands and `[labs]` config section.
+- **Lance charge indicator:** particles in your Kakugane's palette run along the lance as it charges, and at full charge the tip sparks once with a chime. Everyone nearby sees it.
+- The human-type Homunculus milestone can now be earned (by killing a lab's Leader).
+- Cleanup: removed an unused method (`SerialRegistry.claimedCount`) and an unused import in the test harness.
 
 ## 0.1.2 changes
 

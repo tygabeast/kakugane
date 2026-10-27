@@ -1,0 +1,7 @@
+{
+  "type": "kakugane:lab",
+  "biomes": "#kakugane:has_lab",
+  "step": "underground_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "none"
+}

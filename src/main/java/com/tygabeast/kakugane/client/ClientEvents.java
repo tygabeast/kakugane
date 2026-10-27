@@ -14,10 +14,12 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public final class ClientEvents {
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
-        if (Minecraft.getInstance().player == null) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return;
         while (ClientSetup.ACTIVATE.consumeClick()) {
             PacketDistributor.sendToServer(ModNetwork.ToggleForm.INSTANCE);
         }
+        ChargeEffects.tick(mc);
     }
 
     private ClientEvents() {}

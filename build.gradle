@@ -45,7 +45,8 @@ neoForge {
         shotsClient {
             client()
             sourceSet = sourceSets.gametest
-            systemProperty 'kakugane.shots', 'true'
+            systemProperty 'kakugane.shots', providers.gradleProperty('shots').getOrElse('forms')
+            systemProperty 'kakugane.quick', providers.gradleProperty('quick').getOrElse('false')
             programArguments.addAll '--width', '960', '--height', '540', '--quickPlaySingleplayer', 'shots'
         }
         gameTestServer {

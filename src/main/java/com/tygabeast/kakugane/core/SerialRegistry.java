@@ -49,8 +49,6 @@ public final class SerialRegistry extends SavedData {
         }
     }
 
-    public int claimedCount() { return claimed.cardinality(); }
-
     private static SerialRegistry load(CompoundTag tag, HolderLookup.Provider registries) {
         SerialRegistry r = new SerialRegistry();
         for (int s : tag.getIntArray("claimed")) r.claimed.set(s);

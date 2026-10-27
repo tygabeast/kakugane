@@ -8,6 +8,20 @@ import com.tygabeast.kakugane.core.PlayerState;
 import com.tygabeast.kakugane.data.KakuganeData;
 import com.tygabeast.kakugane.entity.AlchemicArrow;
 import com.tygabeast.kakugane.entity.Hound;
+import com.tygabeast.kakugane.entity.Crawler;
+import com.tygabeast.kakugane.entity.LabLeader;
+import com.tygabeast.kakugane.entity.Ram;
+import com.tygabeast.kakugane.entity.WebShot;
+import com.tygabeast.kakugane.block.EmbryoVatBlock;
+import com.tygabeast.kakugane.world.LabPiece;
+import com.tygabeast.kakugane.world.LabStructure;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.levelgen.structure.StructureType;
+import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceType;
+import net.minecraft.world.level.material.MapColor;
+import net.neoforged.neoforge.registries.DeferredBlock;
 import com.tygabeast.kakugane.item.EmbryoItem;
 import com.tygabeast.kakugane.item.KakuganeItem;
 import com.tygabeast.kakugane.item.SilverSkinArmorItem;
@@ -90,12 +104,40 @@ public final class ModRegistry {
             () -> EntityType.Builder.of(Hound::new, MobCategory.MONSTER)
                     .sized(0.9f, 1.05f).clientTrackingRange(10).build("hound"));
 
+    public static final DeferredHolder<EntityType<?>, EntityType<Ram>> RAM = ENTITIES.register("ram",
+            () -> EntityType.Builder.of(Ram::new, MobCategory.MONSTER)
+                    .sized(1.1f, 1.4f).clientTrackingRange(10).build("ram"));
+
+    public static final DeferredHolder<EntityType<?>, EntityType<Crawler>> CRAWLER = ENTITIES.register("crawler",
+            () -> EntityType.Builder.of(Crawler::new, MobCategory.MONSTER)
+                    .sized(1.5f, 0.95f).clientTrackingRange(10).build("crawler"));
+
+    public static final DeferredHolder<EntityType<?>, EntityType<LabLeader>> LAB_LEADER = ENTITIES.register("lab_leader",
+            () -> EntityType.Builder.of(LabLeader::new, MobCategory.MONSTER)
+                    .sized(0.7f, 2.05f).clientTrackingRange(10).build("lab_leader"));
+
+    public static final DeferredHolder<EntityType<?>, EntityType<WebShot>> WEB_SHOT = ENTITIES.register("web_shot",
+            () -> EntityType.Builder.<WebShot>of(WebShot::new, MobCategory.MISC)
+                    .sized(0.3f, 0.3f).clientTrackingRange(4).updateInterval(10).build("web_shot"));
+
     public static final DeferredHolder<EntityType<?>, EntityType<AlchemicArrow>> ALCHEMIC_ARROW = ENTITIES.register("alchemic_arrow",
             () -> EntityType.Builder.<AlchemicArrow>of(AlchemicArrow::new, MobCategory.MISC)
                     .sized(0.5f, 0.5f).clientTrackingRange(4).updateInterval(20).build("alchemic_arrow"));
 
+    // ---- Blocks --------------------------------------------------------------------------------------
+    public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(Kakugane.MODID);
+
+    public static final DeferredBlock<EmbryoVatBlock> EMBRYO_VAT = BLOCKS.register("embryo_vat",
+            () -> new EmbryoVatBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_RED).strength(0.6f)
+                    .sound(SoundType.GLASS).noOcclusion().lightLevel(s -> 6).isViewBlocking((s, l, p) -> false)
+                    .isSuffocating((s, l, p) -> false).isRedstoneConductor((s, l, p) -> false)
+                    // Pistons can't move vats (a moved vat would count as destroyed and confuse the lab tracker).
+                    .pushReaction(net.minecraft.world.level.material.PushReaction.BLOCK)));
+
     // ---- Items ---------------------------------------------------------------------------------------
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(Kakugane.MODID);
+
+    public static final DeferredItem<BlockItem> EMBRYO_VAT_ITEM = ITEMS.registerSimpleBlockItem(EMBRYO_VAT);
 
     public static final DeferredItem<KakuganeItem> KAKUGANE = ITEMS.register("kakugane",
             () -> new KakuganeItem(new Item.Properties().stacksTo(1).rarity(Rarity.RARE).fireResistant()));
@@ -107,6 +149,12 @@ public final class ModRegistry {
     public static final DeferredItem<SilverSkinArmorItem> SILVER_SKIN_BOOTS = silverSkin("silver_skin_boots", ArmorItem.Type.BOOTS);
     public static final DeferredItem<DeferredSpawnEggItem> HOUND_SPAWN_EGG = ITEMS.register("hound_spawn_egg",
             () -> new DeferredSpawnEggItem(HOUND, 0x34373D, 0xB3202A, new Item.Properties()));
+    public static final DeferredItem<DeferredSpawnEggItem> RAM_SPAWN_EGG = ITEMS.register("ram_spawn_egg",
+            () -> new DeferredSpawnEggItem(RAM, 0x4A4640, 0xE2DCC8, new Item.Properties()));
+    public static final DeferredItem<DeferredSpawnEggItem> CRAWLER_SPAWN_EGG = ITEMS.register("crawler_spawn_egg",
+            () -> new DeferredSpawnEggItem(CRAWLER, 0x231B2A, 0x8E2DB8, new Item.Properties()));
+    public static final DeferredItem<DeferredSpawnEggItem> LAB_LEADER_SPAWN_EGG = ITEMS.register("lab_leader_spawn_egg",
+            () -> new DeferredSpawnEggItem(LAB_LEADER, 0xE6E6E0, 0x9E1B2B, new Item.Properties()));
 
     private static DeferredItem<SilverSkinArmorItem> silverSkin(String name, ArmorItem.Type type) {
         return ITEMS.register(name, () -> new SilverSkinArmorItem(SILVER_SKIN_MATERIAL, type, new Item.Properties().stacksTo(1)));
@@ -134,6 +182,14 @@ public final class ModRegistry {
     public static final DeferredHolder<MapCodec<? extends BiomeModifier>, MapCodec<HomunculusSpawnModifier>> HOMUNCULUS_SPAWNS =
             BIOME_MODIFIERS.register("homunculus_spawns", () -> HomunculusSpawnModifier.CODEC);
 
+    // ---- Lab structure ---------------------------------------------------------------------------------
+    public static final DeferredRegister<StructureType<?>> STRUCTURE_TYPES = DeferredRegister.create(Registries.STRUCTURE_TYPE, Kakugane.MODID);
+    public static final DeferredHolder<StructureType<?>, StructureType<LabStructure>> LAB = STRUCTURE_TYPES.register("lab", () -> () -> LabStructure.CODEC);
+
+    public static final DeferredRegister<StructurePieceType> PIECES = DeferredRegister.create(Registries.STRUCTURE_PIECE, Kakugane.MODID);
+    public static final DeferredHolder<StructurePieceType, StructurePieceType> LAB_PIECE = PIECES.register("lab_piece",
+            () -> (StructurePieceType) LabPiece::new);
+
     // ---- Creative tab --------------------------------------------------------------------------------
     public static final DeferredRegister<CreativeModeTab> TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, Kakugane.MODID);
 
@@ -143,12 +199,19 @@ public final class ModRegistry {
             .displayItems((params, out) -> {
                 out.accept(KAKUGANE.get());
                 out.accept(EMBRYO.get());
+                out.accept(EMBRYO_VAT_ITEM.get());
                 out.accept(HOUND_SPAWN_EGG.get());
+                out.accept(RAM_SPAWN_EGG.get());
+                out.accept(CRAWLER_SPAWN_EGG.get());
+                out.accept(LAB_LEADER_SPAWN_EGG.get());
             })
             .build());
 
     public static void register(IEventBus modBus) {
         COMPONENTS.register(modBus);
+        BLOCKS.register(modBus);
+        STRUCTURE_TYPES.register(modBus);
+        PIECES.register(modBus);
         ARMOR_MATERIALS.register(modBus);
         ENTITIES.register(modBus);
         ITEMS.register(modBus);

@@ -17,6 +17,7 @@ import com.tygabeast.kakugane.data.Archetype;
 import com.tygabeast.kakugane.data.KakuganeData;
 import com.tygabeast.kakugane.data.Trait;
 import com.tygabeast.kakugane.registry.ModRegistry;
+import com.tygabeast.kakugane.world.LabTracker;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -37,6 +38,8 @@ import java.util.Optional;
  * /kakugane affinity add <players> <form> <amount> - ops: add affinity (testing)
  * /kakugane deed <players> human|embryo|elite      - ops: credit a deed to the active Kakugane (testing)
  * /kakugane heart reset <players>       - ops: return the heart as an item and allow a new one
+ * /kakugane lab                         - anyone: the state of the lab you are standing in
+ * /kakugane lab stage <0-3> | advance   - ops: set a lab's stage, or run one day of growth now (testing)
  */
 public final class KakuganeCommand {
     private static final SuggestionProvider<CommandSourceStack> FORMS = (ctx, b) ->
@@ -66,12 +69,45 @@ public final class KakuganeCommand {
                                 .then(Commands.literal("human").executes(c -> deed(c, KakuganeData.Deeds::withHuman)))
                                 .then(Commands.literal("embryo").executes(c -> deed(c, KakuganeData.Deeds::addEmbryo)))
                                 .then(Commands.literal("elite").executes(c -> deed(c, KakuganeData.Deeds::withElite)))))
+                .then(Commands.literal("lab")
+                        .executes(c -> labInfo(c.getSource()))
+                        .then(Commands.literal("stage").requires(s -> s.hasPermission(2))
+                                .then(Commands.argument("stage", IntegerArgumentType.integer(0, 3)).executes(c -> {
+                                    var st = labHere(c.getSource());
+                                    if (st == null) return 0;
+                                    var level = c.getSource().getLevel();
+                                    var lab = LabTracker.get(level).record(st);
+                                    int stage = IntegerArgumentType.getInteger(c, "stage");
+                                    // Move the day count to the start of that stage too, so growth carries on from there.
+                                    lab.days = stage * KakuganeConfig.LAB_DAYS_PER_STAGE.get();
+                                    LabTracker.setStage(level, st, lab, stage);
+                                    return labInfo(c.getSource());
+                                })))
+                        .then(Commands.literal("advance").requires(s -> s.hasPermission(2)).executes(c -> {
+                            var st = labHere(c.getSource());
+                            if (st == null) return 0;
+                            LabTracker.update(c.getSource().getLevel(), st, true);
+                            return labInfo(c.getSource());
+                        })))
                 .then(Commands.literal("heart").requires(s -> s.hasPermission(2))
                         .then(Commands.literal("reset")
                                 .then(Commands.argument("players", EntityArgument.players()).executes(c -> {
                                     for (ServerPlayer p : EntityArgument.getPlayers(c, "players")) Hearts.reset(p);
                                     return 1;
                                 })))));
+    }
+
+    private static net.minecraft.world.level.levelgen.structure.StructureStart labHere(CommandSourceStack src) {
+        var st = LabTracker.labAt(src.getLevel(), net.minecraft.core.BlockPos.containing(src.getPosition()));
+        if (st == null) src.sendFailure(Component.translatable("command.kakugane.lab.none"));
+        return st;
+    }
+
+    private static int labInfo(CommandSourceStack src) {
+        var st = labHere(src);
+        if (st == null) return 0;
+        src.sendSuccess(() -> LabTracker.describe(src.getLevel(), st), false);
+        return 1;
     }
 
     private static int showAffinity(CommandSourceStack src, ServerPlayer p) {

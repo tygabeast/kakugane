@@ -26,6 +26,10 @@ public final class KakuganeConfig {
     public static final ModConfigSpec.EnumValue<Rarity> RARITY;
     public static final ModConfigSpec.IntValue CUSTOM_HOUND_WEIGHT;
     public static final ModConfigSpec.IntValue DENSITY_CAP;
+    // Labs
+    public static final ModConfigSpec.DoubleValue CUSTOM_LAB_CHANCE;
+    public static final ModConfigSpec.IntValue LAB_DAYS_PER_STAGE;
+    public static final ModConfigSpec.BooleanValue LAB_OUTBREAKS;
     // Debug
     public static final ModConfigSpec.BooleanValue DEBUG;
 
@@ -66,6 +70,17 @@ public final class KakuganeConfig {
                 .defineInRange("densityCap", 6, 1, 100);
         b.pop();
 
+        b.push("labs");
+        CUSTOM_LAB_CHANCE = b.comment("Chance a lab site actually gets a lab when rarity = CUSTOM (RARE 0.5, STANDARD 0.75, COMMON 1.0).",
+                        "Labs exist at every preset. Only affects newly generated chunks.")
+                .defineInRange("customLabChance", 0.75, 0.0, 1.0);
+        LAB_DAYS_PER_STAGE = b.comment("In-game days, counted only while a player is at the lab, for an uncleared lab to grow a stage",
+                        "(Dormant, Active: vats regrow and guards return, Spreading: night outbreaks, Overrun: bigger outbreaks).")
+                .defineInRange("daysPerStage", 3, 1, 100);
+        LAB_OUTBREAKS = b.comment("Whether labs at the Spreading stage or later send Homunculi out to the surface at night.")
+                .define("outbreaks", true);
+        b.pop();
+
         DEBUG = b.comment("Print extra information to the log.").define("debug", false);
         SPEC = b.build();
     }
@@ -77,6 +92,16 @@ public final class KakuganeConfig {
             case STANDARD -> 8;
             case COMMON -> 25;
             case CUSTOM -> CUSTOM_HOUND_WEIGHT.get();
+        };
+    }
+
+    /** Chance a lab site gets a lab, from the rarity preset. */
+    public static double labChance() {
+        return switch (RARITY.get()) {
+            case RARE -> 0.5;
+            case STANDARD -> 0.75;
+            case COMMON -> 1.0;
+            case CUSTOM -> CUSTOM_LAB_CHANCE.get();
         };
     }
 

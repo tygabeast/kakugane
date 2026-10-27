@@ -93,11 +93,17 @@ public final class ClientSetup {
     public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModRegistry.HOUND.get(), HoundRenderer::new);
         event.registerEntityRenderer(ModRegistry.ALCHEMIC_ARROW.get(), AlchemicArrowRenderer::new);
+        event.registerEntityRenderer(ModRegistry.RAM.get(), RamRenderer::new);
+        event.registerEntityRenderer(ModRegistry.CRAWLER.get(), CrawlerRenderer::new);
+        event.registerEntityRenderer(ModRegistry.LAB_LEADER.get(), LeaderRenderer::new);
+        event.registerEntityRenderer(ModRegistry.WEB_SHOT.get(), net.minecraft.client.renderer.entity.ThrownItemRenderer::new);
     }
 
     @SubscribeEvent
     public static void onRegisterLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
         event.registerLayerDefinition(HoundModel.LAYER, HoundModel::createBodyLayer);
+        event.registerLayerDefinition(RamModel.LAYER, RamModel::createBodyLayer);
+        event.registerLayerDefinition(LeaderModel.LAYER, LeaderModel::createBodyLayer);
     }
 
     @SubscribeEvent

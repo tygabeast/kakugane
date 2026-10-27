@@ -282,4 +282,95 @@ public class KakuganeGameTests {
         h.assertFalse(st.hasActive(), "nothing active");
         h.succeed();
     }
+
+    // ---- wave 2: labs and new Homunculi -------------------------------------------------------------
+
+    @GameTest(template = "empty")
+    public static void ramPlatingDeflectsFrontHits(GameTestHelper h) {
+        ServerPlayer p = h.makeMockServerPlayerInLevel();
+        com.tygabeast.kakugane.entity.Ram ram = h.spawn(ModRegistry.RAM.get(), new BlockPos(1, 1, 1));
+        ram.setNoAi(true);
+        ram.setYRot(0f);
+        ram.yBodyRot = 0f; // facing +z (south)
+        float start = ram.getHealth();
+        p.moveTo(ram.getX(), ram.getY(), ram.getZ() + 2, 180f, 0f); // in front
+        ram.hurt(p.damageSources().playerAttack(p), 8f);
+        float front = start - ram.getHealth();
+        ram.setHealth(start);
+        ram.invulnerableTime = 0;
+        p.moveTo(ram.getX(), ram.getY(), ram.getZ() - 2, 0f, 0f); // behind
+        ram.hurt(p.damageSources().playerAttack(p), 8f);
+        float back = start - ram.getHealth();
+        h.assertTrue(front < back * 0.6f, "front hit deflected (front " + front + ", back " + back + ")");
+        h.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 120)
+    public static void leaderTransformsRegeneratesAndSummons(GameTestHelper h) {
+        ServerPlayer p = h.makeMockServerPlayerInLevel();
+        com.tygabeast.kakugane.entity.LabLeader leader = h.spawn(ModRegistry.LAB_LEADER.get(), new BlockPos(1, 1, 1));
+        leader.setMotif(com.tygabeast.kakugane.entity.LabLeader.Motif.RAM);
+        h.assertFalse(leader.transformed(), "starts in human form");
+        float max = leader.getMaxHealth();
+        leader.hurt(p.damageSources().playerAttack(p), 4f); // mundane: reduced, and it should heal back
+        h.assertTrue(leader.transformed(), "transforms when attacked");
+        float afterMundane = leader.getHealth();
+        h.runAfterDelay(40, () -> {
+            h.assertTrue(leader.getHealth() > afterMundane, "regenerates after mundane damage");
+            // Kakugane damage stops the regeneration.
+            p.setItemInHand(InteractionHand.MAIN_HAND, formed(Archetype.LANCE, 912));
+            ActiveForms.activateStack(p, p.getMainHandItem());
+            leader.invulnerableTime = 0;
+            // A Ram-motif leader shrugs off frontal hits, so turn its back to the player for this one.
+            float toPlayer = (float) Math.toDegrees(Math.atan2(p.getZ() - leader.getZ(), p.getX() - leader.getX())) - 90f;
+            leader.yBodyRot = leader.yBodyRotO = toPlayer + 180f;
+            leader.hurt(p.damageSources().playerAttack(p), max * 0.6f);
+            float afterAlchemical = leader.getHealth();
+            h.assertTrue(afterAlchemical <= max * 0.5f, "took the big hit (" + afterAlchemical + ")");
+            int rams = h.getLevel().getEntitiesOfClass(com.tygabeast.kakugane.entity.Ram.class, leader.getBoundingBox().inflate(6)).size();
+            h.assertTrue(rams == 2, "summoned two Rams at half health (" + rams + ")");
+            h.runAfterDelay(40, () -> {
+                h.assertTrue(leader.getHealth() <= afterAlchemical + 0.01f, "no regeneration right after Kakugane damage");
+                h.succeed();
+            });
+        });
+    }
+
+    @GameTest(template = "empty")
+    public static void leaderStageScalesHealth(GameTestHelper h) {
+        com.tygabeast.kakugane.entity.LabLeader leader = h.spawn(ModRegistry.LAB_LEADER.get(), new BlockPos(1, 1, 1));
+        float base = leader.getMaxHealth();
+        leader.setStage(2);
+        h.assertTrue(Math.abs(leader.getMaxHealth() - base * 1.5f) < 0.01f, "stage 2 = +50% health");
+        h.assertTrue(Math.abs(leader.getHealth() - leader.getMaxHealth()) < 0.01f, "health ratio kept");
+        leader.setStage(0);
+        h.assertTrue(Math.abs(leader.getMaxHealth() - base) < 0.01f, "back to base");
+        h.succeed();
+    }
+    @GameTest(template = "empty", timeoutTicks = 60)
+    public static void websPassThroughHomunculi(GameTestHelper h) {
+        com.tygabeast.kakugane.entity.Crawler crawler = h.spawn(ModRegistry.CRAWLER.get(), new BlockPos(1, 1, 0));
+        crawler.setNoAi(true);
+        Hound hound = h.spawn(ModRegistry.HOUND.get(), new BlockPos(1, 1, 3));
+        hound.setNoAi(true);
+        float start = hound.getHealth();
+        // A web fired from the Crawler straight through the Hound.
+        var web = new com.tygabeast.kakugane.entity.WebShot(h.getLevel(), crawler, 3f);
+        var at = hound.position();
+        web.moveTo(at.x, at.y + 0.5, at.z - 1.5, 0f, 0f);
+        web.shoot(0, 0, 1, 1.0f, 0f);
+        h.getLevel().addFreshEntity(web);
+        h.runAfterDelay(20, () -> {
+            h.assertTrue(hound.getHealth() >= start, "Hound untouched by a Crawler's web");
+            h.assertFalse(hound.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN), "and not slowed");
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = "empty")
+    public static void vatsResistPistons(GameTestHelper h) {
+        var state = ModRegistry.EMBRYO_VAT.get().defaultBlockState();
+        h.assertTrue(state.getPistonPushReaction() == net.minecraft.world.level.material.PushReaction.BLOCK, "vats can't be pushed");
+        h.succeed();
+    }
 }

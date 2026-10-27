@@ -25,13 +25,14 @@ import java.util.function.Consumer;
  */
 @EventBusSubscriber(modid = Kakugane.MODID, value = Dist.CLIENT)
 public final class ShotsHarness {
-    private static final boolean ON = Boolean.getBoolean("kakugane.shots");
+    private static final String MODE = System.getProperty("kakugane.shots", "");
+    private static final boolean ON = !MODE.isEmpty();
     private static final float YAW = 0f;
     private static int tick = -1;
     private static Float bodyOffset;
     private static final List<Step> STEPS = new ArrayList<>();
 
-    private record Step(int at, Consumer<Minecraft> action) {}
+    record Step(int at, Consumer<Minecraft> action) {}
 
     private static void at(int t, Consumer<Minecraft> a) {
         STEPS.add(new Step(t, a));
@@ -59,7 +60,8 @@ public final class ShotsHarness {
         at(t + 40, mc -> thirdPerson(mc));
         at(t + 70, mc -> shot(mc, "lance_idle_3rd"));
         at(t + 75, mc -> holdUse(mc, true));
-        at(t + 115, mc -> shot(mc, "lance_charge_3rd"));
+        at(t + 92, mc -> shot(mc, "lance_charge_half_3rd")); // part-way: dust only
+        at(t + 115, mc -> shot(mc, "lance_charge_3rd")); // full: dust plus the tip spark
         at(t + 120, mc -> firstPerson(mc));
         at(t + 130, mc -> shot(mc, "lance_charge_1st"));
         at(t + 135, mc -> mc.player.getInventory().selected = 4); // stop using without releasing (no dash)
@@ -103,13 +105,22 @@ public final class ShotsHarness {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.getSingleplayerServer() == null) return;
         tick++;
-        if (tick > 125) {
+        if (tick > 125 && !MODE.equals("labs")) {
             mc.player.setYRot(YAW);
             mc.player.yRotO = YAW;
             mc.player.setXRot(5f);
             mc.player.xRotO = 5f;
             mc.player.yHeadRot = mc.player.yHeadRotO = YAW;
             if (bodyOffset != null) mc.player.yBodyRot = mc.player.yBodyRotO = YAW + bodyOffset;
+        }
+        if (MODE.equals("labs")) {
+            // The lab scenario teleports far away, so its clock pauses until the world around the player is drawn.
+            if (settling(mc)) {
+                tick--;
+                return;
+            }
+            for (Step s : LabShots.STEPS) if (s.at == tick) s.action.accept(mc);
+            return;
         }
         for (Step s : STEPS) if (s.at == tick) s.action.accept(mc);
     }
@@ -136,17 +147,51 @@ public final class ShotsHarness {
         KeyMapping.set(key, down);
     }
 
-    private static void shot(Minecraft mc, String name) {
-        Kakugane.LOGGER.info("[shots] {}: using={} useTicks={}", name, mc.player.isUsingItem(), mc.player.getTicksUsingItem());
+    private static int settleTicks = -1, steadyTicks;
+    /** Server actions queued but not yet run; settling waits for these (finding a lab can take seconds). */
+    private static final java.util.concurrent.atomic.AtomicInteger pending = new java.util.concurrent.atomic.AtomicInteger();
+
+    /** Pause the step clock until the chunks around the player are loaded and drawn (at most a minute). */
+    static void settle() {
+        settleTicks = 0;
+        steadyTicks = 0;
+    }
+
+    private static boolean settling(Minecraft mc) {
+        if (settleTicks < 0) return false;
+        settleTicks++;
+        net.minecraft.core.BlockPos pos = mc.player.blockPosition();
+        boolean ready = pending.get() == 0 && mc.levelRenderer.hasRenderedAllSections() && mc.levelRenderer.isSectionCompiled(pos);
+        for (int dx = -2; dx <= 2 && ready; dx++)
+            for (int dz = -2; dz <= 2 && ready; dz++)
+                ready = mc.level.hasChunk((pos.getX() >> 4) + dx, (pos.getZ() >> 4) + dz);
+        steadyTicks = ready ? steadyTicks + 1 : 0;
+        // At least 3 seconds (for the server to move us), then 2 steady seconds; give up after a minute.
+        if ((settleTicks > 60 && steadyTicks > 40) || settleTicks > 1200) {
+            Kakugane.LOGGER.info("[shots] settled after {} ticks (ready={})", settleTicks, ready);
+            settleTicks = -1;
+            return false;
+        }
+        return true;
+    }
+
+    static void shot(Minecraft mc, String name) {
+        Kakugane.LOGGER.info("[shots] {}: at {} flying={} using={} useTicks={}", name, mc.player.position(), mc.player.getAbilities().flying,
+                mc.player.isUsingItem(), mc.player.getTicksUsingItem());
         Screenshot.grab(mc.gameDirectory, name + ".png", mc.getMainRenderTarget(), msg -> Kakugane.LOGGER.info("[shots] {}", msg.getString()));
     }
 
-    private static void server(Minecraft mc, java.util.function.BiConsumer<MinecraftServer, ServerPlayer> action) {
+    static void server(Minecraft mc, java.util.function.BiConsumer<MinecraftServer, ServerPlayer> action) {
         MinecraftServer s = mc.getSingleplayerServer();
         java.util.UUID id = mc.player.getUUID();
+        pending.incrementAndGet();
         s.execute(() -> {
-            ServerPlayer p = s.getPlayerList().getPlayer(id);
-            if (p != null) action.accept(s, p);
+            try {
+                ServerPlayer p = s.getPlayerList().getPlayer(id);
+                if (p != null) action.accept(s, p);
+            } finally {
+                pending.decrementAndGet();
+            }
         });
     }
 
