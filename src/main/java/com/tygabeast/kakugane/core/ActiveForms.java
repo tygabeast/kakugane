@@ -154,10 +154,7 @@ public final class ActiveForms {
         if (h.has() && h.data().active()) {
             KakuganeData d = h.data();
             boolean ok = d.form().isPresent();
-            if (ok && !d.form().get().worn()) {
-                KakuganeData held = KakuganeAccess.data(p.getMainHandItem());
-                ok = p.getMainHandItem().getItem() instanceof KakuganeItem && held.heart() && held.serial() == d.serial();
-            }
+            if (ok && !d.form().get().worn()) ok = KakuganeAccess.hasProjection(p, d.serial());
             if (ok) {
                 fill(st, d, true);
             } else {
@@ -179,25 +176,37 @@ public final class ActiveForms {
         }
     }
 
-    /** Cheap consistency check, every second for players with an active form. */
+    /**
+     * Cheap consistency check, once a second for players with an active form: the active Kakugane (or a held
+     * heart form's copy) must still be in the inventory. If it has gone (into a chest, dropped, deleted) the
+     * form reverts after a grace period. Creative-mode inventory moves are only reported to the server when the
+     * item is put down, so creative players get a minute before anything happens.
+     */
     public static void validate(ServerPlayer p, PlayerState st) {
         int serial = st.activeSerial;
+        boolean present;
         if (st.activeHeart) {
             HeartData h = KakuganeAccess.heart(p);
             if (!h.matches(serial) || !h.data().active()) {
                 st.clearActive();
-            } else if (!st.activeForm.worn()) {
-                // A held heart form must still be in the hand; if the copy left the inventory, revert.
-                KakuganeData held = KakuganeAccess.data(p.getMainHandItem());
-                if (!(p.getMainHandItem().getItem() instanceof KakuganeItem) || !held.heart() || held.serial() != serial) deactivate(p);
+                return;
             }
+            present = st.activeForm.worn() || KakuganeAccess.hasProjection(p, serial);
+        } else {
+            present = KakuganeAccess.findInInventory(p, serial) != null;
+        }
+        if (present) {
+            st.missingChecks = 0;
             return;
         }
-        if (KakuganeAccess.findInInventory(p, serial) == null) {
-            Archetype form = st.activeForm;
-            st.clearActive();
-            if (form.worn()) SilverSkin.stripPieces(p, serial);
+        if (++st.missingChecks < (p.isCreative() ? 60 : 3)) return;
+        if (st.activeHeart) {
+            deactivate(p);
+            return;
         }
+        Archetype form = st.activeForm;
+        st.clearActive();
+        if (form.worn()) SilverSkin.stripPieces(p, serial);
     }
 
     // ---- internals ----------------------------------------------------------------------------------

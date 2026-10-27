@@ -31,6 +31,9 @@ public final class PlayerState {
     // Last time this player took damage (for the "tank" affinity signal and the Mending trait)
     public long lastHurtTick = -100000;
 
+    // Seconds the active Kakugane has been missing from the inventory (see ActiveForms.validate)
+    public int missingChecks;
+
     public boolean hasActive() { return activeForm != null; }
 
     public void clearActive() {
@@ -40,6 +43,7 @@ public final class PlayerState {
         activeTier = 0;
         activeHeart = false;
         hardenStacks = 0;
+        missingChecks = 0;
     }
 
     public float traitScale() { return Trait.scale(activeTier); }

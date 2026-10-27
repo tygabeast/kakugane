@@ -1,0 +1,43 @@
+{
+  "parent": "kakugane:item/form_lance",
+  "textures": {
+    "layer0": "kakugane:item/form_lance",
+    "layer1": "kakugane:item/form_lance_accent"
+  },
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [
+        -114.06,
+        83.12,
+        137.86
+      ],
+      "translation": [
+        -0.74,
+        3.728,
+        -1.719
+      ],
+      "scale": [
+        1.25,
+        1.25,
+        1.25
+      ]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [
+        -114.06,
+        -83.12,
+        -137.86
+      ],
+      "translation": [
+        -0.74,
+        3.728,
+        -1.719
+      ],
+      "scale": [
+        1.25,
+        1.25,
+        1.25
+      ]
+    }
+  }
+}

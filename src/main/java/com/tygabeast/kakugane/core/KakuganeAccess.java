@@ -81,6 +81,17 @@ public final class KakuganeAccess {
         return result;
     }
 
+    /** True if a heart projection with this serial is in the inventory or on the cursor. */
+    public static boolean hasProjection(Player p, int serial) {
+        Inventory inv = p.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack s = inv.getItem(i);
+            if (s.getItem() instanceof KakuganeItem && data(s).heart() && data(s).serial() == serial) return true;
+        }
+        ItemStack carried = p.containerMenu.getCarried();
+        return carried.getItem() instanceof KakuganeItem && data(carried).heart() && data(carried).serial() == serial;
+    }
+
     /** Removes any heart projection with this serial from the inventory. */
     public static void removeProjections(ServerPlayer p, int serial) {
         Inventory inv = p.getInventory();

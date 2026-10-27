@@ -13,6 +13,13 @@
     },
     {
       "predicate": {
+        "kakugane:form": 1,
+        "kakugane:pulling": 1
+      },
+      "model": "kakugane:item/form_lance_charging"
+    },
+    {
+      "predicate": {
         "kakugane:form": 2
       },
       "model": "kakugane:item/form_bow"

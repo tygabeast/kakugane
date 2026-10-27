@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "enum": "net/minecraft/client/model/HumanoidModel$ArmPose",
+      "name": "KAKUGANE_LANCE_CHARGE",
+      "constructor": "(ZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
+      "parameters": {
+        "class": "com/tygabeast/kakugane/client/LancePose",
+        "field": "CHARGE"
+      }
+    }
+  ]
+}

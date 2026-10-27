@@ -40,6 +40,14 @@ neoForge {
         kakugane { sourceSet sourceSets.gametest }
     }
     runs {
+        // Dev-only: a real client under a virtual display, driven by the screenshot harness in src/gametest
+        // (enabled with -Dkakugane.shots=true). Not part of the released jar.
+        shotsClient {
+            client()
+            sourceSet = sourceSets.gametest
+            systemProperty 'kakugane.shots', 'true'
+            programArguments.addAll '--width', '960', '--height', '540', '--quickPlaySingleplayer', 'shots'
+        }
         gameTestServer {
             type = 'gameTestServer'
             systemProperty 'neoforge.enabledGameTestNamespaces', 'kakugane'

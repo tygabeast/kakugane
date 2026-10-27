@@ -188,6 +188,10 @@ def bow(pull=-1):
     return outline(base), acc
 
 
+def mirror(layers):
+    return tuple(np.ascontiguousarray(img[:, ::-1]) for img in layers)
+
+
 def breaker():
     base, acc = new(16, 16), new(16, 16)
     line(base, 1, 14, 9, 6, lambda i, n: ramp(WOOD, 0.3 + 0.4 * (i / n)))
@@ -397,10 +401,23 @@ BIG_HANDHELD = {
 }
 
 
+# Third-person display while charging the Lance: couched at the hip, levelled forward. Solved in
+# tools/pose_preview.py (solve_third with CHARGE_ARM / CHARGE_TP); the arm pose itself is client/LancePose.java.
+_LC_ROT, _LC_T, _LC_S = [-114.06, 83.12, 137.86], [-0.74, 3.728, -1.719], [1.25, 1.25, 1.25]
+LANCE_CHARGE_DISPLAY = {
+    'thirdperson_righthand': {'rotation': _LC_ROT, 'translation': _LC_T, 'scale': _LC_S},
+    # Left hand uses vanilla's convention: the game negates Y/Z rotation and X translation itself.
+    'thirdperson_lefthand': {'rotation': [_LC_ROT[0], -_LC_ROT[1], -_LC_ROT[2]], 'translation': _LC_T, 'scale': _LC_S},
+}
+
+
 def write_models():
     f = 'kakugane:form'
     item_model('kakugane', ['kakugane_plate', 'kakugane_plate_accent'], overrides=[
         {'predicate': {f: 1}, 'model': 'kakugane:item/form_lance'},
+        # Matched only for a charging lance: overrides are checked last-first and every value is a minimum, so
+        # this must sit before the bow entries (a drawing bow, form 2, would also pass form >= 1).
+        {'predicate': {f: 1, 'kakugane:pulling': 1}, 'model': 'kakugane:item/form_lance_charging'},
         {'predicate': {f: 2}, 'model': 'kakugane:item/form_bow'},
         {'predicate': {f: 2, 'kakugane:pulling': 1}, 'model': 'kakugane:item/form_bow_pulling_0'},
         {'predicate': {f: 2, 'kakugane:pulling': 1, 'kakugane:pull': 0.65}, 'model': 'kakugane:item/form_bow_pulling_1'},
@@ -409,6 +426,7 @@ def write_models():
         {'predicate': {f: 4}, 'model': 'kakugane:item/form_silver_skin'},
     ])
     item_model('form_lance', ['form_lance', 'form_lance_accent'], parent='minecraft:item/handheld', display=BIG_HANDHELD)
+    item_model('form_lance_charging', ['form_lance', 'form_lance_accent'], parent='kakugane:item/form_lance', display=LANCE_CHARGE_DISPLAY)
     item_model('form_breaker', ['form_breaker', 'form_breaker_accent'], parent='minecraft:item/handheld', display=BIG_HANDHELD)
     item_model('form_bow', ['form_bow', 'form_bow_accent'], parent='minecraft:item/bow')
     for i in range(3):
@@ -639,9 +657,11 @@ def main():
     items['kakugane_plate'] = plate(False)
     items['kakugane_plate_active'] = plate(True)
     items['form_lance'] = lance()
-    items['form_bow'] = bow(-1)
+    # Bows are drawn mirrored to match vanilla's bow.png layout (grip lower-left, arc toward the upper left),
+    # which the vanilla bow display transforms expect.
+    items['form_bow'] = mirror(bow(-1))
     for i in range(3):
-        items[f'form_bow_pulling_{i}'] = bow(i)
+        items[f'form_bow_pulling_{i}'] = mirror(bow(i))
     items['form_breaker'] = breaker()
     for k in ('helmet', 'chestplate', 'leggings', 'boots'):
         items[f'silver_skin_{k}'] = armor_icon(k)

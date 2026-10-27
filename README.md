@@ -9,7 +9,8 @@ A Kakugane is a hexagonal alchemical plate. Activate it ("Buso Renkin!") and it 
 - **Activate / revert:** press **R** (rebindable: "Buso Renkin") while holding a Kakugane, or right-click a dormant one.
 - **Bonding:** a Kakugane bonds to the first player who activates it and refuses anyone else. Sneak + right-click a dormant Kakugane to release your bond. The bond also breaks when its wielder dies.
 - **Taking form:** an unformed Kakugane waits until it "knows you". The mod records your combat choices (a bow kill counts fully when you also had a sword on your hotbar, only a little when the bow was all you had) and fades old activity so recent play matters most. Check with `/kakugane affinity`.
-- **One at a time:** activating a second Kakugane reverts the first. Held forms revert when you switch away from them.
+- **One at a time:** activating a second Kakugane reverts the first.
+- **Staying active:** an active form stays active anywhere in your inventory, so you can switch to embryos or other items and move it around freely. It reverts when you press R again, or when it leaves your inventory (after a few seconds; a minute in creative, where inventory moves are only reported when you put the item down).
 - **Legacy:** a Kakugane passed to a new wielder keeps its form but drops back to tier 0. The tooltip shows who shaped it and its last few wielders.
 
 ### Forms in this release
@@ -67,11 +68,18 @@ Imprint threshold, no-choice weight, affinity half-life, serial cap, embryos per
 
 ## Building
 
-Requires Java 21. `gradle build` produces the jar in `build/libs`. `gradle runGameTestServer` runs the automated server-side tests in `src/gametest`. `python3 tools/gen.py` regenerates textures and item models (Pillow and NumPy).
+Requires Java 21. `gradle build` produces the jar in `build/libs`. `gradle runGameTestServer` runs the automated server-side tests in `src/gametest`. `python3 tools/gen.py` regenerates textures and item models (Pillow and NumPy). `python3 tools/pose_preview.py` solves and previews held-item poses. `gradle runShotsClient` (needs a display, or `xvfb-run`) starts a client that poses each form and saves screenshots to `run/screenshots`; it expects a world in `run/saves/shots`.
 
 ## License
 
 MIT (see `LICENSE`), covering the code and the original textures and models in this repository. *Buso Renkin* and its names belong to their owners; this is an unofficial fan mod.
+
+## 0.1.2 changes
+
+- Active forms no longer revert when you switch hotbar slots or move them in your inventory, so embryos can be crushed with any form, and Silver Skin can live off the hotbar.
+- Bow form is held the right way round (its textures now match vanilla's bow layout).
+- New Lance charge pose: couched at the hip and levelled forward in third person, drawn back and trembling at full charge in first person, instead of the trident overhead pose.
+- `tools/pose_preview.py` previews and solves held-item poses with the game's own transforms.
 
 ## 0.1.1 changes
 

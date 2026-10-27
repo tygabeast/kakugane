@@ -133,7 +133,7 @@ public class KakuganeItem extends Item {
         KakuganeData d = data(stack);
         if (!d.active()) return UseAnim.NONE;
         Archetype f = d.form().orElse(null);
-        if (f == Archetype.LANCE) return UseAnim.SPEAR;
+        // The Lance has its own charge pose (client/LancePose); NONE stops vanilla's trident pose taking over.
         if (f == Archetype.BOW) return UseAnim.BOW;
         return UseAnim.NONE;
     }
@@ -162,7 +162,7 @@ public class KakuganeItem extends Item {
     @Override
     public void inventoryTick(ItemStack stack, Level level, Entity entity, int slot, boolean selected) {
         if (level.isClientSide() || !(entity instanceof ServerPlayer p)) return;
-        ActiveFormsGuard.tick(p, stack, selected);
+        ActiveFormsGuard.tick(p, stack);
     }
 
     @Override

@@ -95,16 +95,51 @@ public class KakuganeGameTests {
     }
 
     @GameTest(template = "empty")
-    public static void heldFormRevertsWhenSwitchedAway(GameTestHelper h) {
+    public static void heldFormStaysActiveAndEmbryosCanBeCrushed(GameTestHelper h) {
         ServerPlayer p = h.makeMockServerPlayerInLevel();
         p.getInventory().selected = 0;
         p.getInventory().setItem(0, formed(Archetype.LANCE, 902));
+        p.getInventory().setItem(1, new ItemStack(ModRegistry.EMBRYO.get(), 3));
         ActiveForms.activateStack(p, p.getInventory().getItem(0));
-        h.assertTrue(data(p.getInventory().getItem(0)).active(), "active");
         p.getInventory().selected = 1;
         p.getInventory().tick();
-        h.assertFalse(data(p.getInventory().getItem(0)).active(), "reverts when not held");
-        h.assertFalse(KakuganeAccess.state(p).hasActive(), "cache cleared");
+        h.assertTrue(data(p.getInventory().getItem(0)).active(), "stays active when not held");
+        h.assertTrue(KakuganeAccess.state(p).hasActive(), "cache kept");
+        ModRegistry.EMBRYO.get().use(p.level(), p, InteractionHand.MAIN_HAND);
+        // (The mock player is in creative, where the embryo isn't used up; the deed is what matters.)
+        h.assertTrue(data(p.getInventory().getItem(0)).deeds().embryos() == 1, "embryo crushed with the lance in another slot");
+        // Move the active plate to the main inventory: still active.
+        p.getInventory().setItem(20, p.getInventory().getItem(0));
+        p.getInventory().setItem(0, ItemStack.EMPTY);
+        ActiveForms.validate(p, KakuganeAccess.state(p));
+        p.getInventory().tick();
+        h.assertTrue(data(p.getInventory().getItem(20)).active() && KakuganeAccess.state(p).hasActive(), "survives a move");
+        h.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void missingFormRevertsAfterGrace(GameTestHelper h) {
+        ServerPlayer p = h.makeMockServerPlayerInLevel(); // the mock player counts as creative: 60 s grace
+        p.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE));
+        p.setItemInHand(InteractionHand.MAIN_HAND, formed(Archetype.SILVER_SKIN, 911));
+        ActiveForms.activateStack(p, p.getMainHandItem());
+        ItemStack plate = p.getMainHandItem().copy();
+        p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY); // e.g. lifted in the creative inventory
+        PlayerState st = KakuganeAccess.state(p);
+        for (int i = 0; i < 59; i++) ActiveForms.validate(p, st);
+        h.assertTrue(st.hasActive() && p.getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof SilverSkinArmorItem, "grace period");
+        p.setItemInHand(InteractionHand.MAIN_HAND, plate); // put back down
+        ActiveForms.validate(p, st);
+        h.assertTrue(st.hasActive() && st.missingChecks == 0, "found again, counter reset");
+        p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        for (int i = 0; i < 60; i++) ActiveForms.validate(p, st);
+        h.assertFalse(st.hasActive(), "reverted after the grace period");
+        h.assertTrue(p.getItemBySlot(EquipmentSlot.CHEST).isEmpty(), "suit removed");
+        // The plate turning up again returns the armor stored inside it.
+        p.setItemInHand(InteractionHand.MAIN_HAND, plate);
+        p.getInventory().tick();
+        h.assertFalse(data(p.getMainHandItem()).active(), "plate reverted");
+        h.assertTrue(p.getItemBySlot(EquipmentSlot.CHEST).is(Items.IRON_CHESTPLATE), "armor returned");
         h.succeed();
     }
 
@@ -170,7 +205,9 @@ public class KakuganeGameTests {
         h.assertTrue(data(p.getMainHandItem()).heart() && data(p.getMainHandItem()).active(), "projection in hand");
         p.getInventory().selected = 2;
         p.getInventory().tick();
-        h.assertTrue(p.getInventory().getItem(0).isEmpty(), "projection vanishes when switched away");
+        h.assertTrue(data(p.getInventory().getItem(0)).heart() && KakuganeAccess.state(p).hasActive(), "projection stays when switched away");
+        ActiveForms.toggle(p);
+        h.assertTrue(p.getInventory().getItem(0).isEmpty(), "projection vanishes on revert");
         h.assertFalse(KakuganeAccess.state(p).hasActive(), "heart form reverted");
         h.assertTrue(heart.has() && !heart.data().active(), "real heart kept, inactive");
         h.succeed();

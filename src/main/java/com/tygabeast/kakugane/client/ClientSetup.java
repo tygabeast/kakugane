@@ -18,6 +18,12 @@ import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import net.minecraft.world.item.ItemStack;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.entity.LivingEntity;
 import org.lwjgl.glfw.GLFW;
 
 /** Client-only setup on the mod bus: renderers, model switching, colour tints and the activation key. */
@@ -56,9 +62,24 @@ public final class ClientSetup {
                 ModRegistry.SILVER_SKIN_LEGGINGS.get(), ModRegistry.SILVER_SKIN_BOOTS.get());
     }
 
-    /** Tints the Silver Skin accent layer on the body with the piece's palette colour. */
+    /** Tints the Silver Skin accent layer on the body; gives the charging Lance its own arm pose. */
     @SubscribeEvent
     public static void onClientExtensions(RegisterClientExtensionsEvent event) {
+        event.registerItem(new IClientItemExtensions() {
+            @Override
+            public HumanoidModel.ArmPose getArmPose(LivingEntity entity, InteractionHand hand, ItemStack stack) {
+                return LancePose.isCharging(entity, hand, stack) ? LancePose.CHARGE.getValue() : null;
+            }
+
+            @Override
+            public boolean applyForgeHandTransform(PoseStack pose, LocalPlayer player, HumanoidArm arm, ItemStack stack,
+                                                   float partialTick, float equipProcess, float swingProcess) {
+                InteractionHand hand = arm == player.getMainArm() ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
+                if (!LancePose.isCharging(player, hand, stack)) return false;
+                LancePose.firstPerson(pose, player, arm, stack, partialTick, equipProcess);
+                return true;
+            }
+        }, ModRegistry.KAKUGANE.get());
         event.registerItem(new IClientItemExtensions() {
             @Override
             public int getDefaultDyeColor(ItemStack stack) {

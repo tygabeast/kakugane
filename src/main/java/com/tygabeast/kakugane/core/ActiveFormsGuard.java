@@ -10,7 +10,7 @@ import net.minecraft.world.item.ItemStack;
  */
 public final class ActiveFormsGuard {
 
-    public static void tick(ServerPlayer p, ItemStack stack, boolean selected) {
+    public static void tick(ServerPlayer p, ItemStack stack) {
         KakuganeData d = KakuganeAccess.data(stack);
 
         if (d.serial() <= 0) {
@@ -19,35 +19,26 @@ public final class ActiveFormsGuard {
         }
 
         if (d.heart()) {
-            guardProjection(p, stack, d, selected);
+            guardProjection(p, stack, d);
             return;
         }
 
         if (!d.active()) return;
-        boolean worn = d.form().map(f -> f.worn()).orElse(false);
         PlayerState st = KakuganeAccess.state(p);
         boolean isOurs = st.hasActive() && !st.activeHeart && st.activeSerial == d.serial();
-
-        if (!isOurs) {
-            // Active but not this player's active form: it was moved here somehow. Revert it.
-            ActiveForms.deactivateStack(p, stack);
-            return;
-        }
-        if (!worn) {
-            // Held forms only stay out while held. Switching away reverts them.
-            boolean inHand = selected || p.getOffhandItem() == stack;
-            if (!inHand) ActiveForms.deactivate(p);
-        }
+        // An active form may sit anywhere in its wielder's inventory (switch to an embryo, move the plate around).
+        // One that is active but not this player's active form was moved here somehow: revert it.
+        if (!isOurs) ActiveForms.deactivateStack(p, stack);
     }
 
     /**
-     * A heart projection may only exist in its owner's selected hand while their heart form is active.
-     * Anywhere else (another slot, another player) it simply vanishes; the real heart is safe in HeartData.
+     * A heart projection may only exist in its owner's inventory while their heart form is active.
+     * Anywhere else (another player, after reverting) it simply vanishes; the real heart is safe in HeartData.
      */
-    private static void guardProjection(ServerPlayer p, ItemStack stack, KakuganeData d, boolean selected) {
+    private static void guardProjection(ServerPlayer p, ItemStack stack, KakuganeData d) {
         HeartData h = KakuganeAccess.heart(p);
         PlayerState st = KakuganeAccess.state(p);
-        boolean valid = selected && h.matches(d.serial()) && st.hasActive() && st.activeHeart && st.activeSerial == d.serial();
+        boolean valid = h.matches(d.serial()) && st.hasActive() && st.activeHeart && st.activeSerial == d.serial();
         if (valid) return;
         stack.setCount(0);
         if (h.matches(d.serial()) && st.hasActive() && st.activeHeart) ActiveForms.deactivate(p);

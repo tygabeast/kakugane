@@ -5,8 +5,9 @@ issueTrackerURL=""
 
 [[mods]]
 modId="kakugane"
-version="0.1.1"
+version="0.1.2"
 displayName="Kakugane"
+enumExtensions="META-INF/enumextensions.json"
 authors="Tygabeast"
 description='''
 Alchemical plates that transform into a weapon or armor shaped by how you fight, inspired by Buso Renkin.
